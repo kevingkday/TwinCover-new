@@ -1,0 +1,9 @@
+name = "twincover"
+compatibility_date = "2026-01-01"
+pages_build_output_dir = "frontend/dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "twincover-db"
+database_id = "your-cloudflare-d1-database-id-here"
+migrations_dir = "backend/migrations"
