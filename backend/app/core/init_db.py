@@ -145,6 +145,26 @@ def init_db():
             db.commit()
             logger.info("Default letter templates successfully seeded.")
 
+        # Check if Word (.docx) system template exists
+        docx_tmpl = db.query(LetterTemplate).filter(LetterTemplate.template_type == "docx").first()
+        if not docx_tmpl:
+            import os
+            docx_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "sample_templates", "Apex_Broker_Standard_Letterhead.docx"))
+            if os.path.exists(docx_path):
+                docx_tmpl = LetterTemplate(
+                    name="Apex Brokerage Letterhead (.docx)",
+                    description="Official brokerage corporate letterhead with full logo, navy headers, contact bar, and dynamic coverages schedule table.",
+                    category="Broker Letterhead",
+                    content=TEMPLATE_1_CONTENT,
+                    template_type="docx",
+                    file_path=docx_path,
+                    original_filename="Apex_Broker_Standard_Letterhead.docx",
+                    is_system=True
+                )
+                db.add(docx_tmpl)
+                db.commit()
+                logger.info("Default Word (.docx) letterhead template seeded.")
+
         # 2. Seed Demo Broker User
         demo_email = "broker@twincover.com"
         demo_user = db.query(User).filter(User.email == demo_email).first()

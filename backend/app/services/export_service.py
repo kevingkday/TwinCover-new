@@ -258,5 +258,61 @@ class ExportService:
         buffer.seek(0)
         return buffer.getvalue()
 
+    @staticmethod
+    def render_docx_template(
+        template_path: str,
+        fields: dict,
+        broker_info: dict
+    ) -> bytes:
+        """Merge verified policy fields and dynamic coverages into an uploaded Word (.docx) template."""
+        import json
+        from datetime import datetime
+        from docxtpl import DocxTemplate
+
+        doc = DocxTemplate(template_path)
+
+        # Parse coverages list
+        coverages_list = fields.get("coverages") or []
+        if isinstance(coverages_list, str):
+            try:
+                coverages_list = json.loads(coverages_list)
+            except Exception:
+                coverages_list = []
+
+        if coverages_list and isinstance(coverages_list, list):
+            lines = []
+            for c in coverages_list:
+                name = c.get("name") or "Standard Coverage"
+                limit = c.get("limit") or "Included"
+                ded = c.get("deductible") or "Standard / Nil"
+                lines.append(f"• {name}: Limit {limit} | Deductible: {ded}")
+            coverages_table_text = "\n".join(lines)
+        else:
+            coverages_table_text = f"• Commercial General Liability: {fields.get('cgl_limit') or '$2,000,000'}\n• Cyber Deductible: {fields.get('cyber_deductible') or '$5,000'}"
+
+        context = {
+            "insured_name": fields.get("insured_name") or "[Client Insured Name]",
+            "policy_number": fields.get("policy_number") or "[Policy # Pending]",
+            "insurer": fields.get("insurer") or "[Insurance Carrier]",
+            "effective_date": fields.get("effective_date") or "[Effective Date]",
+            "expiry_date": fields.get("expiry_date") or "[Expiry Date]",
+            "total_premium": fields.get("total_premium") or "$0.00",
+            "cgl_limit": fields.get("cgl_limit") or "$2,000,000",
+            "property_limit": fields.get("property_limit") or "$10,000,000",
+            "cyber_limit": fields.get("cyber_limit") or "$2,000,000",
+            "cyber_deductible": fields.get("cyber_deductible") or "$5,000",
+            "coverages": coverages_list,
+            "coverages_table": coverages_table_text,
+            "broker_name": broker_info.get("full_name") or "Commercial Insurance Account Executive",
+            "agency_name": broker_info.get("agency_name") or "TwinCover Commercial Advisory Group",
+            "broker_email": broker_info.get("email") or "broker@twincover.com",
+            "current_date": broker_info.get("current_date") or datetime.now().strftime("%B %d, %Y")
+        }
+
+        doc.render(context)
+        out = io.BytesIO()
+        doc.save(out)
+        return out.getvalue()
+
 
 export_service = ExportService()

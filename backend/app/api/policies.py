@@ -87,10 +87,13 @@ async def upload_policy(
         # Don't fail the whole upload if embedding index encounters an issue
         print(f"Warning: Chroma vector indexing error: {e}")
 
-    # Step 4: Extract key fields via Ollama / regex fallback
+    # Step 4: Extract key fields via Ollama strictly from Declarations block
     extracted_data = await ollama_client.extract_policy_fields(extracted_markdown)
 
     # Step 5: Save ExtractedFields record (unverified by default)
+    coverages_list = extracted_data.get("coverages") or []
+    coverages_json = json.dumps(coverages_list) if isinstance(coverages_list, (list, dict)) else str(coverages_list)
+
     fields = ExtractedFields(
         policy_id=policy.id,
         insured_name=extracted_data.get("insured_name") or client.name,
@@ -103,6 +106,7 @@ async def upload_policy(
         cyber_limit=extracted_data.get("cyber_limit"),
         cyber_deductible=extracted_data.get("cyber_deductible"),
         total_premium=extracted_data.get("total_premium"),
+        coverages=coverages_json,
         raw_json=json.dumps(extracted_data),
         verified=False
     )
@@ -163,6 +167,14 @@ def verify_and_update_fields(
         db.add(fields)
 
     update_dict = fields_in.model_dump(exclude_unset=True)
+    if "coverages" in update_dict and update_dict["coverages"] is not None:
+        covs = update_dict["coverages"]
+        if isinstance(covs, list):
+            fields.coverages = json.dumps([c if isinstance(c, dict) else c.model_dump() for c in covs])
+        else:
+            fields.coverages = json.dumps(covs)
+        del update_dict["coverages"]
+
     for k, v in update_dict.items():
         setattr(fields, k, v)
 

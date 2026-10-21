@@ -1,119 +1,115 @@
-import io
 import logging
 from typing import Tuple
-import httpx
-from pypdf import PdfReader
+import requests
+from fastapi import HTTPException, status
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class ExtractorClient:
-    """Client for external Document Extractor microservice with built-in PDF fallback."""
+    """Client for external MicroNode Document Extractor microservice at port 5005."""
 
     def __init__(self):
-        self.url = settings.EXTRACTOR_URL
-        self.token = settings.EXTRACTOR_TOKEN
+        self.url = settings.EXTRACTOR_URL.replace("localhost", "127.0.0.1")
+        self.token = settings.EXTRACTOR_TOKEN or "micronode-secret-key"
 
     async def check_health(self) -> Tuple[bool, str]:
         """Check if external extractor microservice is reachable."""
         try:
-            async with httpx.AsyncClient(timeout=3.0) as client:
-                # Attempt ping or options on base domain / health
-                base_url = self.url.rsplit("/", 1)[0]
-                resp = await client.get(f"{base_url}/health")
-                if resp.status_code in (200, 404):
-                    return True, "Microservice reachable"
-                return False, f"Returned status {resp.status_code}"
+            base_url = self.url.rsplit("/", 1)[0]
+            resp = requests.get(
+                f"{base_url}/health",
+                headers={"Authorization": f"Bearer {self.token}"},
+                timeout=3.0
+            )
+            if resp.status_code in (200, 404):
+                return True, "Microservice reachable"
+            return False, f"Returned status {resp.status_code}"
         except Exception as e:
             return False, f"Offline ({type(e).__name__})"
 
-    async def extract_markdown_from_pdf(self, pdf_bytes: bytes, filename: str) -> str:
+    async def extract_markdown_from_pdf(
+        self,
+        file_bytes: bytes = None,
+        filename: str = "document.pdf",
+        pdf_bytes: bytes = None
+    ) -> str:
         """
-        Forward raw PDF bytes to external microservice.
-        If microservice is unavailable, fallback gracefully to high-precision built-in PDF extractor.
+        Forward raw PDF bytes directly in request body via HTTP PUT to MicroNode Extractor at port 5005.
+        Target URL: http://127.0.0.1:5005/process
+        Headers: {"Authorization": "Bearer micronode-secret-key"}
+        Request Body: data=file_bytes
+        Timeout: 120
+        Error Handling: Catch requests.exceptions.RequestException and log the exact response status code
+        and response body before raising 502 error.
         """
+        raw_bytes = file_bytes if file_bytes is not None else pdf_bytes
+        if raw_bytes is None:
+            raise ValueError("No PDF file bytes provided for extraction")
+
+        target_url = "http://127.0.0.1:5005/process"
+        token = self.token or "micronode-secret-key"
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+
         try:
-            headers = {
-                "Authorization": f"Bearer {self.token}"
-            }
-            files = {
-                "file": (filename, pdf_bytes, "application/pdf")
-            }
+            logger.info(
+                f"Sending PUT request to {target_url} for {filename} ({len(raw_bytes)} bytes) with timeout=120"
+            )
+            response = requests.put(
+                target_url,
+                data=raw_bytes,
+                headers=headers,
+                timeout=120
+            )
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                logger.info(f"Forwarding {filename} to external extractor: {self.url}")
-                response = await client.post(self.url, headers=headers, files=files)
+            # Raise HTTPError for 4xx/5xx responses if raise_for_status is supported
+            if hasattr(response, "raise_for_status"):
+                response.raise_for_status()
+            elif getattr(response, "status_code", 200) != 200:
+                logger.error(
+                    f"MicroNode Extractor at port 5005 returned HTTP {response.status_code}: {getattr(response, 'text', '')}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="MicroNode Extractor at port 5005 is not running."
+                )
 
-                if response.status_code == 200:
-                    data = response.json() if "application/json" in response.headers.get("content-type", "") else None
-                    if data and isinstance(data, dict) and "markdown" in data:
-                        return data["markdown"]
-                    elif response.text:
-                        return response.text
-                logger.warning(f"External extractor responded with status {response.status_code}. Using built-in engine.")
-        except Exception as exc:
-            logger.info(f"External extractor unreachable ({exc}). Using built-in local PDF engine.")
+            # Parse markdown or page content from successful response
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    if isinstance(data, dict):
+                        if "markdown" in data and data["markdown"]:
+                            return data["markdown"]
+                        elif "page_content" in data and data["page_content"]:
+                            return data["page_content"]
+                        elif "text" in data and data["text"]:
+                            return data["text"]
+                        elif "content" in data and data["content"]:
+                            return data["content"]
+                except Exception:
+                    pass
 
-        # Built-in local PDF extraction fallback
-        return self._extract_locally(pdf_bytes, filename)
+                if response.text and response.text.strip():
+                    return response.text.strip()
 
-    def _extract_locally(self, pdf_bytes: bytes, filename: str) -> str:
-        """
-        Extract structured markdown text directly from PDF bytes using PyPDF.
-        Synthesizes formatted markdown schedules, sections, and tables.
-        """
-        reader = PdfReader(io.BytesIO(pdf_bytes))
-        total_pages = len(reader.pages)
-        markdown_sections = []
+            return ""
 
-        markdown_sections.append(f"# POLICY DECLARATIONS & SCHEDULE SUMMARY\n**Document Source:** `{filename}` | **Pages:** {total_pages}\n")
-
-        for idx, page in enumerate(reader.pages):
-            page_num = idx + 1
-            text = page.extract_text() or ""
-            text = text.strip()
-            if not text:
-                continue
-
-            markdown_sections.append(f"## Section / Page {page_num}\n")
-            # Structure into clean paragraphs and lists
-            lines = text.splitlines()
-            current_block = []
-
-            for line in lines:
-                cleaned = line.strip()
-                if not cleaned:
-                    if current_block:
-                        markdown_sections.append(" ".join(current_block) + "\n\n")
-                        current_block = []
-                    continue
-
-                # Header detection heuristics
-                if (
-                    cleaned.isupper() and len(cleaned) < 80
-                    or cleaned.startswith("SECTION")
-                    or cleaned.startswith("SCHEDULE")
-                    or cleaned.startswith("PART ")
-                    or cleaned.startswith("ENDORSEMENT")
-                ):
-                    if current_block:
-                        markdown_sections.append(" ".join(current_block) + "\n\n")
-                        current_block = []
-                    markdown_sections.append(f"### {cleaned}\n")
-                elif ":" in cleaned and len(cleaned.split(":", 1)[0]) < 40:
-                    if current_block:
-                        markdown_sections.append(" ".join(current_block) + "\n\n")
-                        current_block = []
-                    parts = cleaned.split(":", 1)
-                    markdown_sections.append(f"- **{parts[0].strip()}:** {parts[1].strip()}\n")
-                else:
-                    current_block.append(cleaned)
-
-            if current_block:
-                markdown_sections.append(" ".join(current_block) + "\n\n")
-
-        return "\n".join(markdown_sections)
+        except HTTPException:
+            raise
+        except requests.exceptions.RequestException as exc:
+            resp_code = exc.response.status_code if getattr(exc, "response", None) is not None else "No response"
+            resp_body = exc.response.text if getattr(exc, "response", None) is not None else str(exc)
+            logger.error(
+                f"MicroNode Extractor at port 5005 request failed. Status: {resp_code}, Body: {resp_body}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="MicroNode Extractor at port 5005 is not running."
+            ) from exc
 
 
 extractor_client = ExtractorClient()

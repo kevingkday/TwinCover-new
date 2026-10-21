@@ -1,6 +1,7 @@
+import json
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from typing import Optional, List, Dict, Any, Union
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 
 # ==========================================
@@ -82,6 +83,13 @@ class ClientResponse(ClientBase):
 # Extracted Fields Schemas
 # ==========================================
 
+class CoverageItem(BaseModel):
+    name: str
+    limit: Optional[str] = None
+    deductible: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class ExtractedFieldsBase(BaseModel):
     insured_name: Optional[str] = None
     policy_number: Optional[str] = None
@@ -93,6 +101,19 @@ class ExtractedFieldsBase(BaseModel):
     cyber_limit: Optional[str] = None
     cyber_deductible: Optional[str] = None
     total_premium: Optional[str] = None
+    coverages: Optional[List[CoverageItem]] = None
+
+    @field_validator("coverages", mode="before")
+    @classmethod
+    def parse_coverages(cls, v):
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                return []
+        return v
 
 
 class ExtractedFieldsUpdate(ExtractedFieldsBase):
@@ -139,6 +160,8 @@ class LetterTemplateBase(BaseModel):
     description: Optional[str] = None
     category: str = "Renewal"
     content: str
+    template_type: str = "markdown"
+    original_filename: Optional[str] = None
 
 
 class LetterTemplateCreate(LetterTemplateBase):
@@ -150,12 +173,16 @@ class LetterTemplateUpdate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     content: Optional[str] = None
+    template_type: Optional[str] = None
+    original_filename: Optional[str] = None
 
 
 class LetterTemplateResponse(LetterTemplateBase):
     id: int
     user_id: Optional[int] = None
     is_system: bool = False
+    template_type: str = "markdown"
+    original_filename: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -187,6 +214,8 @@ class ExportDocxRequest(BaseModel):
     content: str
     client_name: Optional[str] = None
     policy_number: Optional[str] = None
+    template_id: Optional[int] = None
+    policy_id: Optional[int] = None
 
 
 # ==========================================

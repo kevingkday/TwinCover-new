@@ -14,11 +14,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.sqlite3
-*.db
+*.db*
 !test_*.db
 test_twincover.db
-twincover.db
+twincover.db*
 .pytest_cache/
+.env
+*.env
 
 # Storage
 uploads/

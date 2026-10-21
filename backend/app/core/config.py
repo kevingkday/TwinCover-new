@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,11 +17,15 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     # External AI & Extraction Services
-    EXTRACTOR_URL: str = "http://localhost:5005/process"
+    EXTRACTOR_URL: str = "http://127.0.0.1:5005/process"
     EXTRACTOR_TOKEN: str = "micronode-secret-key"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     LLM_MODEL: str = "qwen2.5:7b-instruct"
     EMBED_MODEL: str = "nomic-embed-text"
+
+    # Cloudflare Zero Trust Access (Service Token for remote/tunneled Ollama & Extractor)
+    CF_ACCESS_CLIENT_ID: Optional[str] = None
+    CF_ACCESS_CLIENT_SECRET: Optional[str] = None
 
     # ChromaDB & Upload Storage
     CHROMA_PERSIST_DIRECTORY: str = "./chroma_data"

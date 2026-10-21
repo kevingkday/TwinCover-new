@@ -12,6 +12,27 @@ export const lettersApi = {
     });
   },
 
+  async uploadDocxTemplate(formData) {
+    return apiRequest('/letters/templates/upload-docx', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async downloadDocxTemplate(templateId, filename = 'template.docx') {
+    const blob = await apiRequest(`/letters/templates/${templateId}/download-docx`, {
+      responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
   async updateTemplate(templateId, templateData) {
     return apiRequest(`/letters/templates/${templateId}`, {
       method: 'PUT',
@@ -49,14 +70,16 @@ export const lettersApi = {
     return apiRequest(`/letters/history/${clientId}`);
   },
 
-  async exportDocx(title, content, clientName = '', policyNumber = '') {
+  async exportDocx(title, content, clientName = '', policyNumber = '', templateId = null, policyId = null) {
     const blob = await apiRequest('/letters/export/docx', {
       method: 'POST',
       body: JSON.stringify({
         title,
         content,
         client_name: clientName,
-        policy_number: policyNumber
+        policy_number: policyNumber,
+        template_id: templateId,
+        policy_id: policyId
       }),
       responseType: 'blob'
     });

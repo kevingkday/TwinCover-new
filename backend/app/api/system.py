@@ -53,13 +53,13 @@ async def get_system_health(db: Session = Depends(get_db)):
             name="Document Extractor Microservice",
             url=settings.EXTRACTOR_URL,
             is_online=ext_ok,
-            status_message=ext_msg + (" (Fallback: PyPDF engine active)" if not ext_ok else "")
+            status_message=ext_msg
         ),
         ollama_llm=ServiceStatus(
             name=f"Local LLM ({settings.LLM_MODEL})",
             url=settings.OLLAMA_BASE_URL,
             is_online=ollama_ok,
-            status_message=ollama_msg + (" (Fallback: Rule engine active)" if not ollama_ok else "")
+            status_message=ollama_msg
         ),
         chroma_vector_db=ServiceStatus(
             name="ChromaDB Vector Store (Persistent)",

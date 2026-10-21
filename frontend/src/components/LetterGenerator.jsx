@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Sparkles, Save, Check, RefreshCw, Eye, Edit3, Printer } from 'lucide-react';
+import { FileText, Download, Sparkles, Save, Check, RefreshCw, Eye, Edit3, Printer, ShieldCheck } from 'lucide-react';
 import { lettersApi } from '../api/lettersApi';
 
 export default function LetterGenerator({ client, policy, verifiedFields }) {
@@ -30,6 +30,9 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
       console.error(err);
     }
   };
+
+  const selectedTemplate = templates.find(t => t.id === Number(selectedTemplateId));
+  const isDocxTemplate = selectedTemplate?.template_type === 'docx';
 
   const handleGenerate = async () => {
     if (!selectedTemplateId || !policy) return;
@@ -82,7 +85,9 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
         draftTitle || 'Commercial Policy Renewal Summary',
         draftContent,
         client.name,
-        verifiedFields?.policy_number || ''
+        verifiedFields?.policy_number || '',
+        selectedTemplateId,
+        policy?.id
       );
     } catch (err) {
       setError('DOCX export failed: ' + err.message);
@@ -142,7 +147,7 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Template & Generation Toolbar */}
       <div className="glass-panel" style={{ padding: '20px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '16px', alignItems: 'end' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr auto', gap: '16px', alignItems: 'end' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">Select Renewal Letter Template</label>
             <select
@@ -152,6 +157,7 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
             >
               {templates.map(t => (
                 <option key={t.id} value={t.id}>
+                  {t.template_type === 'docx' ? '📄 [Word Letterhead] ' : '📝 [Markdown] '}
                   {t.name} ({t.category})
                 </option>
               ))}
@@ -164,7 +170,7 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
               type="text"
               value={customInstructions}
               onChange={e => setCustomInstructions(e.target.value)}
-              placeholder="e.g. Highlight the $50k cyber deductible and fleet vehicle warranties"
+              placeholder="e.g. Highlight cyber retention warranties and vehicle floater"
               className="form-input"
             />
           </div>
@@ -179,6 +185,27 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
             <span>{generating ? 'Drafting Letter...' : 'Generate Letter'}</span>
           </button>
         </div>
+
+        {/* Word Template Letterhead Notification */}
+        {isDocxTemplate && (
+          <div style={{
+            marginTop: '14px',
+            padding: '8px 14px',
+            background: 'rgba(59, 130, 246, 0.08)',
+            border: '1px solid rgba(59, 130, 246, 0.25)',
+            borderRadius: 'var(--radius-md)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '12.5px',
+            color: '#93c5fd'
+          }}>
+            <ShieldCheck size={16} color="#60a5fa" />
+            <span>
+              <strong>Word Letterhead Active:</strong> Official logos, executive headers, footers, and table styles from <em>{selectedTemplate.original_filename || selectedTemplate.name}</em> will be merged automatically when downloading .DOCX.
+            </span>
+          </div>
+        )}
 
         {error && (
           <div style={{ marginTop: '12px', color: 'var(--status-error-text)', fontSize: '13px' }}>
@@ -223,7 +250,7 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
                   className={`btn btn-sm ${activeTab === 'edit' ? 'btn-primary' : 'btn-ghost'}`}
                   style={{ padding: '4px 10px', fontSize: '12px' }}
                 >
-                  <Edit3 size={14} /> Edit Raw Markdown
+                  <Edit3 size={14} /> Edit Raw Text
                 </button>
               </div>
             </div>
@@ -243,10 +270,16 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
                 onClick={handleExportDocx}
                 disabled={exporting}
                 className="btn btn-secondary btn-sm"
-                style={{ borderColor: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' }}
+                style={{
+                  borderColor: isDocxTemplate ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.4)',
+                  color: isDocxTemplate ? '#93c5fd' : '#60a5fa',
+                  background: isDocxTemplate ? 'rgba(59, 130, 246, 0.15)' : undefined,
+                  fontWeight: isDocxTemplate ? 600 : 400
+                }}
+                title={isDocxTemplate ? "Render directly into broker's Word letterhead" : "Download executive formatted Word file"}
               >
                 <Download size={14} />
-                <span>Export .DOCX</span>
+                <span>{isDocxTemplate ? 'Export Official .DOCX' : 'Export .DOCX'}</span>
               </button>
 
               <button
