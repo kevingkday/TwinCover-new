@@ -6,12 +6,13 @@ import Register from './pages/Register';
 import ClientsList from './pages/ClientsList';
 import ClientWorkspace from './pages/ClientWorkspace';
 import TemplateEditor from './pages/TemplateEditor';
+import AdminDashboard from './pages/AdminDashboard';
 import { authApi } from './api/authApi';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(authApi.isAuthenticated());
   const [authView, setAuthView] = useState('login'); // 'login' | 'register'
-  const [activePage, setActivePage] = useState('clients'); // 'clients' | 'workspace' | 'templates'
+  const [activePage, setActivePage] = useState('clients'); // 'clients' | 'workspace' | 'templates' | 'admin'
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
 
@@ -76,6 +77,10 @@ export default function App() {
 
         {activePage === 'templates' && (
           <TemplateEditor />
+        )}
+
+        {activePage === 'admin' && (
+          <AdminDashboard />
         )}
       </main>
 

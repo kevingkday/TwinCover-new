@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, FileText, Users, Activity, LogOut, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Shield, FileText, Users, Activity, LogOut, CheckCircle, AlertCircle, RefreshCw, BarChart3 } from 'lucide-react';
 import { authApi } from '../api/authApi';
 import { systemApi } from '../api/systemApi';
 
@@ -85,6 +84,14 @@ export default function Navbar({ activePage, setActivePage, onOpenHealthModal })
           >
             <FileText size={16} />
             Letter Templates
+          </button>
+          <button
+            onClick={() => setActivePage('admin')}
+            className={`btn ${activePage === 'admin' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ fontSize: '13.5px', padding: '6px 14px' }}
+          >
+            <BarChart3 size={16} />
+            Demo Analytics
           </button>
         </nav>
       </div>
