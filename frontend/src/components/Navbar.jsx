@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Shield, FileText, Users, Activity, LogOut, CheckCircle, AlertCircle, RefreshCw, BarChart3 } from 'lucide-react';
 import { authApi } from '../api/authApi';
 import { systemApi } from '../api/systemApi';
