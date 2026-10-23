@@ -37,7 +37,7 @@ echo Frontend App: http://localhost:5173
 echo Demo Login:   broker@twincover.com / TwinCover2026!
 echo ===================================================================
 
-start "TwinCover Backend (FastAPI)" cmd /k "cd backend && ..\.venv\Scripts\activate.bat && uvicorn main:app --reload --port 8000"
+start "TwinCover Backend (FastAPI)" cmd /k "cd backend && set PYTHONPATH=..\.venv\Lib\site-packages;. && ..\.venv\Scripts\activate.bat && python -m uvicorn main:app --port 8000 --reload"
 start "TwinCover Frontend (Vite)" cmd /k "cd frontend && npm run dev"
 
 timeout /t 3 >nul
