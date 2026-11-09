@@ -1,10 +1,23 @@
 import { apiRequest } from './apiClient';
 
 export const policiesApi = {
-  async uploadPolicy(clientId, file) {
+  async classifyDocument(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return apiRequest('/policies/classify', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async uploadPolicy(clientId, file, documentType = null) {
     const formData = new FormData();
     formData.append('client_id', clientId);
     formData.append('file', file);
+    if (documentType) {
+      formData.append('document_type', documentType);
+    }
 
     return apiRequest('/policies/upload', {
       method: 'POST',

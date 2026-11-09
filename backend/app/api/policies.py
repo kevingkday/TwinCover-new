@@ -2,7 +2,7 @@ import os
 import shutil
 import json
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -12,28 +12,58 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.entities import User, Client, Policy, ExtractedFields
 from app.schemas.schemas import (
+    DocumentClassificationResponse,
     PolicyResponse,
     PolicyDetailResponse,
     ExtractedFieldsResponse,
     ExtractedFieldsUpdate
 )
 from app.services.extractor_client import extractor_client
+from app.services.jev_classifier import jev_classifier
 from app.services.ollama_client import ollama_client
 from app.services.rag_service import rag_service
 
 router = APIRouter(prefix="/policies", tags=["Policies"])
 
 
+@router.post("/classify", response_model=DocumentClassificationResponse)
+async def classify_policy_document(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Step 1 of Intake: Fast Document Type Determination via TypeSafe AI's Jev (System One) model.
+    Evaluates the opening pages of the uploaded PDF and returns the classified document type
+    (policy, binder, certificate, endorsement, quote) along with calibrated probabilities.
+    """
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF documents are supported for insurance document classification"
+        )
+
+    pdf_bytes = await file.read()
+    if not pdf_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded PDF file is empty"
+        )
+
+    result = await jev_classifier.classify_pdf(pdf_bytes, file.filename)
+    return result
+
+
 @router.post("/upload", response_model=PolicyResponse, status_code=status.HTTP_201_CREATED)
 async def upload_policy(
     client_id: int = Form(...),
     file: UploadFile = File(...),
+    document_type: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Ingest a commercial policy PDF:
-    1. Verify client ownership
+    Ingest a commercial insurance document PDF:
+    1. Verify client ownership & classify document type via Jev (or broker-confirmed type)
     2. Extract structured Markdown via microservice / local engine
     3. Index chunks into client-isolated Chroma vector space
     4. Run Ollama extraction for structured fields
@@ -49,6 +79,12 @@ async def upload_policy(
     pdf_bytes = await file.read()
     file_size = len(pdf_bytes)
 
+    # Determine document type via Jev (System One) classifier
+    classification = await jev_classifier.classify_pdf(pdf_bytes, file.filename)
+    resolved_doc_type = (document_type or classification.get("document_type") or "policy").strip().lower()
+    confidence_str = f"{int(round(classification.get('confidence', 0.9) * 100))}%"
+    engine_str = classification.get("engine", "Jev System-1")
+
     # Save PDF to disk
     client_dir = os.path.join(settings.UPLOAD_DIR, f"client_{client_id}")
     os.makedirs(client_dir, exist_ok=True)
@@ -62,12 +98,15 @@ async def upload_policy(
     # Step 1: Extract structured markdown
     extracted_markdown = await extractor_client.extract_markdown_from_pdf(pdf_bytes, file.filename)
 
-    # Step 2: Create Policy record
+    # Step 2: Create Policy record with Jev classification metadata
     policy = Policy(
         client_id=client_id,
         filename=file.filename,
         file_path=file_path,
         file_size=file_size,
+        document_type=resolved_doc_type,
+        classification_confidence=confidence_str,
+        classification_engine=engine_str,
         raw_text=extracted_markdown,
         status="extracted"
     )

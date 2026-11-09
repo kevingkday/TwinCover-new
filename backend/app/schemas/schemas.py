@@ -132,14 +132,30 @@ class ExtractedFieldsResponse(ExtractedFieldsBase):
 
 
 # ==========================================
-# Policy Schemas
+# Policy & Document Classification Schemas
 # ==========================================
+
+class DocumentClassificationResponse(BaseModel):
+    filename: str
+    document_type: str
+    document_type_label: str
+    confidence: float
+    probabilities: Dict[str, float]
+    is_insurance_document: float
+    has_coverage_schedule: float
+    total_pages: int = 1
+    summary_reason: str
+    engine: str
+
 
 class PolicyResponse(BaseModel):
     id: int
     client_id: int
     filename: str
     file_size: int
+    document_type: str = "policy"
+    classification_confidence: Optional[str] = None
+    classification_engine: Optional[str] = None
     status: str
     uploaded_at: datetime
     extracted_fields: Optional[ExtractedFieldsResponse] = None
@@ -259,6 +275,7 @@ class ServiceStatus(BaseModel):
 class SystemHealthResponse(BaseModel):
     app_version: str
     database: ServiceStatus
+    jev_classifier: Optional[ServiceStatus] = None
     extractor_microservice: ServiceStatus
     ollama_llm: ServiceStatus
     chroma_vector_db: ServiceStatus

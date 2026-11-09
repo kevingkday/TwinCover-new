@@ -4,6 +4,7 @@ import {
   ShieldCheck, Plus, Trash2, Layers, Shield, Sparkles 
 } from 'lucide-react';
 import { policiesApi } from '../api/policiesApi';
+import { getDocTypeMeta } from './DragDropUpload';
 
 export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLetters }) {
   const [fields, setFields] = useState({
@@ -132,11 +133,29 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <FileText size={22} color="#60a5fa" />
           <div>
-            <div style={{ fontSize: '15px', fontWeight: 600 }}>
-              {policy?.filename || 'Commercial Policy Document'}
+            <div style={{ fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span>{policy?.filename || 'Commercial Policy Document'}</span>
+              {(() => {
+                const docMeta = getDocTypeMeta(policy?.document_type);
+                return (
+                  <span style={{
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    padding: '2px 9px',
+                    borderRadius: '999px',
+                    background: docMeta.bg,
+                    color: docMeta.badgeColor,
+                    border: `1px solid ${docMeta.border}`,
+                  }}>
+                    {docMeta.label}
+                    {policy?.classification_confidence ? ` (${policy.classification_confidence})` : ''}
+                  </span>
+                );
+              })()}
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
               Source PDF Ingested • {policy?.raw_text ? `${policy.raw_text.length.toLocaleString()} characters extracted` : 'Pending'}
+              {policy?.classification_engine ? ` • Classified via ${policy.classification_engine}` : ''}
             </div>
           </div>
         </div>

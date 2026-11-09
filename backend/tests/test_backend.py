@@ -28,6 +28,7 @@ def override_get_db():
 
 
 app.dependency_overrides[get_db] = override_get_db
+Base.metadata.drop_all(bind=test_engine)
 Base.metadata.create_all(bind=test_engine)
 client = TestClient(app)
 
@@ -303,6 +304,119 @@ def test_rag_chunking():
     assert len(chunks) >= 2
     assert chunks[0]["metadata"]["policy_id"] == 1
     assert chunks[0]["metadata"]["client_id"] == 1
+
+
+@pytest.mark.anyio
+async def test_jev_classifier_local_fallback_types():
+    from app.services.jev_classifier import jev_classifier
+
+    # 1. Certificate of Insurance (COI / ACORD 25)
+    coi_res = jev_classifier.classify_with_local_fallback(
+        opening_text="ACORD 25 CERTIFICATE OF LIABILITY INSURANCE\nCertificate Holder: Pacific Port Authority\nThis certificate is issued as a matter of information only.",
+        filename="Apex_ACORD_25_COI.pdf",
+        total_pages=1
+    )
+    assert coi_res["document_type"] == "certificate"
+    assert coi_res["confidence"] >= 0.80
+    assert "certificate" in coi_res["probabilities"]
+
+    # 2. Insurance Binder
+    binder_res = jev_classifier.classify_with_local_fallback(
+        opening_text="TEMPORARY INSURANCE BINDER\nConfirmation of Bound Coverage\nSubjectivities: Signed application within 15 days.",
+        filename="Chubb_Binder_2026.pdf",
+        total_pages=3
+    )
+    assert binder_res["document_type"] == "binder"
+    assert binder_res["confidence"] >= 0.80
+
+    # 3. Commercial Policy
+    policy_res = jev_classifier.classify_with_local_fallback(
+        opening_text="# COVERAGE DECLARATIONS SCHEDULE (PAGE 1)\nNamed Insured: Apex Logistics Ltd\nPolicy Number: APX-2026\nGeneral Conditions and Exclusions",
+        filename="Apex_Renewal_Policy_2026.pdf",
+        total_pages=62
+    )
+    assert policy_res["document_type"] == "policy"
+    assert policy_res["confidence"] >= 0.80
+
+
+@pytest.mark.anyio
+async def test_jev_sdk_system_one_integration(monkeypatch):
+    import typesafe_sdk
+    from app.services.jev_classifier import jev_classifier
+
+    captured_questions = {}
+
+    class MockAsyncTypeSafeClient:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+        async def system_one(self, state, questions, **kwargs):
+            captured_questions.update(questions)
+            return typesafe_sdk.SystemOneResponse(
+                model="jev-latest",
+                usage=typesafe_sdk.Usage(input_tokens=120, output_tokens=12),
+                answers={
+                    "document_type": typesafe_sdk.ChoiceAnswer(
+                        choice="binder",
+                        confidence=0.94,
+                        probabilities={
+                            "policy": 0.03,
+                            "binder": 0.94,
+                            "certificate": 0.01,
+                            "endorsement": 0.01,
+                            "quote": 0.01,
+                        },
+                    ),
+                    "is_insurance_document": typesafe_sdk.NoulAnswer(noul=0.99),
+                    "has_coverage_schedule": typesafe_sdk.NoulAnswer(noul=0.91),
+                },
+            )
+
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", MockAsyncTypeSafeClient)
+    monkeypatch.setattr(jev_classifier, "_get_api_key", lambda: "ts-test-key-123")
+
+    res = await jev_classifier.classify_pdf(b"%PDF-1.4 mock binder", "Temp_Binder_2026.pdf")
+    assert res["document_type"] == "binder"
+    assert res["confidence"] == 0.94
+    assert res["probabilities"]["binder"] == 0.94
+    assert res["is_insurance_document"] == 0.99
+    assert "Jev (jev-latest)" in res["engine"]
+    assert "document_type" in captured_questions
+    assert "is_insurance_document" in captured_questions
+
+
+def test_classify_endpoint():
+    email = f"classifybroker_{os.urandom(4).hex()}@twincover.com"
+    reg_resp = client.post("/api/auth/register", json={
+        "email": email,
+        "password": "TwinCover2026!",
+        "full_name": "Classify Tester",
+        "agency_name": "Apex Commercial"
+    })
+    token = reg_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    sample_pdf_path = os.path.abspath("data/sample_policies/Apex_Logistics_Renewal_Policy_2026.pdf")
+    with open(sample_pdf_path, "rb") as f:
+        pdf_bytes = f.read()
+
+    resp = client.post(
+        "/api/policies/classify",
+        files={"file": ("Apex_Logistics_Renewal_Policy_2026.pdf", pdf_bytes, "application/pdf")},
+        headers=headers
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["document_type"] == "policy"
+    assert body["confidence"] > 0.5
+    assert "probabilities" in body
+    assert body["is_insurance_document"] > 0.5
 
 
 def teardown_module(module):

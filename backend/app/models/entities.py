@@ -48,6 +48,9 @@ class Policy(Base):
     filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     file_size = Column(Integer, nullable=False, default=0)
+    document_type = Column(String(50), nullable=False, default="policy")  # policy, binder, certificate, endorsement, quote, other
+    classification_confidence = Column(String(50), nullable=True)
+    classification_engine = Column(String(100), nullable=True)
     raw_text = Column(Text, nullable=True)
     status = Column(String(50), nullable=False, default="uploaded")  # uploaded, extracted, verified
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

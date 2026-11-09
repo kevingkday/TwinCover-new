@@ -5,6 +5,7 @@ import {
   HardDrive, BarChart3, AlertCircle
 } from 'lucide-react';
 import { systemApi } from '../api/systemApi';
+import { getDocTypeMeta } from '../components/DragDropUpload';
 
 export default function AdminDashboard() {
   const [data, setData] = useState(null);
@@ -331,6 +332,7 @@ export default function AdminDashboard() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', fontSize: '12px', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '10px 12px' }}>Policy File</th>
+                  <th style={{ padding: '10px 12px' }}>Doc Type (Jev)</th>
                   <th style={{ padding: '10px 12px' }}>Client</th>
                   <th style={{ padding: '10px 12px' }}>Uploaded By Broker</th>
                   <th style={{ padding: '10px 12px' }}>Size</th>
@@ -339,13 +341,28 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filteredPolicies.map(p => (
+                {filteredPolicies.map(p => {
+                  const docMeta = getDocTypeMeta(p.document_type);
+                  return (
                   <tr key={p.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', fontSize: '13.5px' }}>
                     <td style={{ padding: '12px', fontWeight: 600, color: '#93c5fd' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FileText size={16} color="#60a5fa" />
+                        <FileText size={16} color={docMeta.badgeColor} />
                         <span>{p.filename}</span>
                       </div>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        background: docMeta.bg,
+                        color: docMeta.badgeColor,
+                        border: `1px solid ${docMeta.border}`,
+                      }}>
+                        {docMeta.label}
+                      </span>
                     </td>
                     <td style={{ padding: '12px', color: '#f8fafc' }}>
                       {p.client_name}
@@ -376,10 +393,11 @@ export default function AdminDashboard() {
                       {formatDate(p.uploaded_at)}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {filteredPolicies.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
                       No policies uploaded yet.
                     </td>
                   </tr>

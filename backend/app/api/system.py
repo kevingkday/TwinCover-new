@@ -9,6 +9,7 @@ from app.core.security import get_current_user
 from app.models.entities import User, Client, Policy, ExtractedFields, LetterTemplate, GeneratedLetter
 from app.schemas.schemas import SystemHealthResponse, ServiceStatus
 from app.services.extractor_client import extractor_client
+from app.services.jev_classifier import jev_classifier
 from app.services.ollama_client import ollama_client
 from app.services.rag_service import rag_service
 
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/system", tags=["System Health & Architecture"])
 
 @router.get("/health", response_model=SystemHealthResponse)
 async def get_system_health(db: Session = Depends(get_db)):
-    """Check connectivity to all core services: DB, Extractor, Ollama, ChromaDB."""
+    """Check connectivity to all core services: DB, Jev Classifier, Extractor, Ollama, ChromaDB."""
     # 1. DB Health
     db_ok = False
     db_msg = "Database connected"
@@ -27,13 +28,16 @@ async def get_system_health(db: Session = Depends(get_db)):
     except Exception as e:
         db_msg = f"DB Error: {str(e)}"
 
-    # 2. Extractor Microservice Health
+    # 2. Jev Document Classifier Health
+    jev_ok, jev_msg = await jev_classifier.check_health()
+
+    # 3. Extractor Microservice Health
     ext_ok, ext_msg = await extractor_client.check_health()
 
-    # 3. Ollama LLM Health
+    # 4. Ollama LLM Health
     ollama_ok, ollama_msg = await ollama_client.check_health()
 
-    # 4. ChromaDB Health
+    # 5. ChromaDB Health
     chroma_ok = False
     chroma_msg = "ChromaDB ready"
     try:
@@ -51,6 +55,12 @@ async def get_system_health(db: Session = Depends(get_db)):
             url=settings.DATABASE_URL,
             is_online=db_ok,
             status_message=db_msg
+        ),
+        jev_classifier=ServiceStatus(
+            name="Jev Document Classifier (TypeSafe System One)",
+            url="https://api.typesafe.ai (typesafe-sdk)",
+            is_online=jev_ok,
+            status_message=jev_msg
         ),
         extractor_microservice=ServiceStatus(
             name="Document Extractor Microservice",
@@ -131,6 +141,8 @@ def get_admin_overview(
             "id": pol.id,
             "filename": pol.filename,
             "file_size": pol.file_size,
+            "document_type": getattr(pol, "document_type", "policy") or "policy",
+            "classification_confidence": getattr(pol, "classification_confidence", None),
             "status": pol.status,
             "uploaded_at": pol.uploaded_at.isoformat() if pol.uploaded_at else None,
             "client_name": cli.name,

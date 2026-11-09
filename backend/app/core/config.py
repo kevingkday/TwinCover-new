@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "qwen2.5:7b-instruct"
     EMBED_MODEL: str = "nomic-embed-text"
 
+    # TypeSafe AI (Jev System One Model for Document Type Determination)
+    TYPESAFE_API_KEY: Optional[str] = None
+    TYPESAFE_MODEL: Optional[str] = None
+
     # Cloudflare Zero Trust Access (Service Token for remote/tunneled Ollama & Extractor)
     CF_ACCESS_CLIENT_ID: Optional[str] = None
     CF_ACCESS_CLIENT_SECRET: Optional[str] = None
@@ -41,7 +45,10 @@ class Settings(BaseSettings):
     ]
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".env")),
+            ".env",
+        ),
         env_file_encoding="utf-8",
         extra="ignore"
     )

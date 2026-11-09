@@ -7,7 +7,7 @@ import {
 import { clientsApi } from '../api/clientsApi';
 import { policiesApi } from '../api/policiesApi';
 import { lettersApi } from '../api/lettersApi';
-import DragDropUpload from '../components/DragDropUpload';
+import DragDropUpload, { getDocTypeMeta } from '../components/DragDropUpload';
 import SideBySideReview from '../components/SideBySideReview';
 import LetterGenerator from '../components/LetterGenerator';
 import ClientRagDrawer from '../components/ClientRagDrawer';
@@ -274,6 +274,7 @@ export default function ClientWorkspace({ clientId, onBack }) {
                 <thead>
                   <tr>
                     <th>Document Filename</th>
+                    <th>Document Type (Jev)</th>
                     <th>Size</th>
                     <th>Status</th>
                     <th>Uploaded At</th>
@@ -281,12 +282,34 @@ export default function ClientWorkspace({ clientId, onBack }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {policies.map(p => (
+                  {policies.map(p => {
+                    const docMeta = getDocTypeMeta(p.document_type);
+                    return (
                     <tr key={p.id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <FileText size={16} color="#60a5fa" />
+                          <FileText size={16} color={docMeta.badgeColor} />
                           <span style={{ fontWeight: 600, color: '#f8fafc' }}>{p.filename}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            fontSize: '11.5px',
+                            fontWeight: 600,
+                            padding: '2px 9px',
+                            borderRadius: '999px',
+                            background: docMeta.bg,
+                            color: docMeta.badgeColor,
+                            border: `1px solid ${docMeta.border}`,
+                          }}>
+                            {docMeta.label}
+                          </span>
+                          {p.classification_confidence && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                              {p.classification_confidence}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -332,7 +355,8 @@ export default function ClientWorkspace({ clientId, onBack }) {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}

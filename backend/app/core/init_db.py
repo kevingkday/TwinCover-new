@@ -116,6 +116,20 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        # Ensure new classification columns exist on existing SQLite policies table
+        from sqlalchemy import text
+        existing_cols = [
+            row[1] for row in db.execute(text("PRAGMA table_info(policies)")).fetchall()
+        ]
+        if existing_cols:
+            if "document_type" not in existing_cols:
+                db.execute(text("ALTER TABLE policies ADD COLUMN document_type VARCHAR(50) NOT NULL DEFAULT 'policy'"))
+            if "classification_confidence" not in existing_cols:
+                db.execute(text("ALTER TABLE policies ADD COLUMN classification_confidence VARCHAR(50)"))
+            if "classification_engine" not in existing_cols:
+                db.execute(text("ALTER TABLE policies ADD COLUMN classification_engine VARCHAR(100)"))
+            db.commit()
+
         # 1. Seed Templates
         if db.query(LetterTemplate).count() == 0:
             templates = [

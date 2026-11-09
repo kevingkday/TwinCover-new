@@ -71,6 +71,29 @@ export default function SystemHealthModal({ isOpen, onClose }) {
               </div>
             </div>
 
+            {/* Jev System One Document Classifier Card */}
+            {health.jev_classifier && (
+              <div className="glass-panel" style={{ padding: '14px 18px', background: 'rgba(255, 255, 255, 0.02)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Cpu size={18} color="#38bdf8" />
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 600 }}>{health.jev_classifier.name}</div>
+                      <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        {health.jev_classifier.url}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`badge ${health.jev_classifier.is_online ? 'badge-verified' : 'badge-pending'}`}>
+                    {health.jev_classifier.is_online ? 'Ready' : 'Offline'}
+                  </span>
+                </div>
+                <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {health.jev_classifier.status_message}
+                </div>
+              </div>
+            )}
+
             {/* Document Extractor Microservice Card */}
             <div className="glass-panel" style={{ padding: '14px 18px', background: 'rgba(255, 255, 255, 0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
