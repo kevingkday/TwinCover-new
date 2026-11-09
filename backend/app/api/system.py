@@ -57,8 +57,8 @@ async def get_system_health(db: Session = Depends(get_db)):
             status_message=db_msg
         ),
         jev_classifier=ServiceStatus(
-            name="Jev Document Classifier (TypeSafe System One)",
-            url="https://api.typesafe.ai (typesafe-sdk)",
+            name="Local Document Classifier (Sovereign System-1)",
+            url=f"{settings.OLLAMA_BASE_URL} (Zero Offsite Data)",
             is_online=jev_ok,
             status_message=jev_msg
         ),

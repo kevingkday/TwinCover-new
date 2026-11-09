@@ -274,7 +274,7 @@ export default function ClientWorkspace({ clientId, onBack }) {
                 <thead>
                   <tr>
                     <th>Document Filename</th>
-                    <th>Document Type (Jev)</th>
+                    <th>Document Type</th>
                     <th>Size</th>
                     <th>Status</th>
                     <th>Uploaded At</th>

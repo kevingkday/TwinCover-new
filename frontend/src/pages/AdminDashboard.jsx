@@ -332,7 +332,7 @@ export default function AdminDashboard() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', fontSize: '12px', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '10px 12px' }}>Policy File</th>
-                  <th style={{ padding: '10px 12px' }}>Doc Type (Jev)</th>
+                  <th style={{ padding: '10px 12px' }}>Document Type</th>
                   <th style={{ padding: '10px 12px' }}>Client</th>
                   <th style={{ padding: '10px 12px' }}>Uploaded By Broker</th>
                   <th style={{ padding: '10px 12px' }}>Size</th>

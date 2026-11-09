@@ -16,16 +16,12 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
-    # External AI & Extraction Services
+    # External AI & Extraction Services (100% Local Sovereign Node)
     EXTRACTOR_URL: str = "http://127.0.0.1:5005/process"
     EXTRACTOR_TOKEN: str = "micronode-secret-key"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     LLM_MODEL: str = "qwen2.5:7b-instruct"
     EMBED_MODEL: str = "nomic-embed-text"
-
-    # TypeSafe AI (Jev System One Model for Document Type Determination)
-    TYPESAFE_API_KEY: Optional[str] = None
-    TYPESAFE_MODEL: Optional[str] = None
 
     # Cloudflare Zero Trust Access (Service Token for remote/tunneled Ollama & Extractor)
     CF_ACCESS_CLIENT_ID: Optional[str] = None

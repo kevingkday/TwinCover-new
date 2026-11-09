@@ -340,55 +340,32 @@ async def test_jev_classifier_local_fallback_types():
 
 
 @pytest.mark.anyio
-async def test_jev_sdk_system_one_integration(monkeypatch):
-    import typesafe_sdk
+async def test_local_sovereign_ollama_classifier_integration(monkeypatch):
+    import httpx
     from app.services.jev_classifier import jev_classifier
 
-    captured_questions = {}
+    class MockResponse:
+        status_code = 200
+        def json(self):
+            return {
+                "response": json.dumps({
+                    "document_type": "binder",
+                    "confidence": 0.95,
+                    "is_insurance_document": 0.99,
+                    "has_coverage_schedule": 0.91,
+                })
+            }
 
-    class MockAsyncTypeSafeClient:
-        def __init__(self, **kwargs):
-            self.kwargs = kwargs
+    async def mock_post(self, url, **kwargs):
+        return MockResponse()
 
-        async def __aenter__(self):
-            return self
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
 
-        async def __aexit__(self, exc_type, exc, tb):
-            pass
-
-        async def system_one(self, state, questions, **kwargs):
-            captured_questions.update(questions)
-            return typesafe_sdk.SystemOneResponse(
-                model="jev-latest",
-                usage=typesafe_sdk.Usage(input_tokens=120, output_tokens=12),
-                answers={
-                    "document_type": typesafe_sdk.ChoiceAnswer(
-                        choice="binder",
-                        confidence=0.94,
-                        probabilities={
-                            "policy": 0.03,
-                            "binder": 0.94,
-                            "certificate": 0.01,
-                            "endorsement": 0.01,
-                            "quote": 0.01,
-                        },
-                    ),
-                    "is_insurance_document": typesafe_sdk.NoulAnswer(noul=0.99),
-                    "has_coverage_schedule": typesafe_sdk.NoulAnswer(noul=0.91),
-                },
-            )
-
-    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", MockAsyncTypeSafeClient)
-    monkeypatch.setattr(jev_classifier, "_get_api_key", lambda: "ts-test-key-123")
-
-    res = await jev_classifier.classify_pdf(b"%PDF-1.4 mock binder", "Temp_Binder_2026.pdf")
+    # Ambiguous filename/text triggers the local Ollama semantic verification pass
+    res = await jev_classifier.classify_pdf(b"%PDF-1.4 ambiguous document", "Document_2026.pdf")
     assert res["document_type"] == "binder"
-    assert res["confidence"] == 0.94
-    assert res["probabilities"]["binder"] == 0.94
-    assert res["is_insurance_document"] == 0.99
-    assert "Jev (jev-latest)" in res["engine"]
-    assert "document_type" in captured_questions
-    assert "is_insurance_document" in captured_questions
+    assert res["confidence"] >= 0.90
+    assert "Local Sovereign" in res["engine"]
 
 
 def test_classify_endpoint():

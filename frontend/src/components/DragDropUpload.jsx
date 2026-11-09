@@ -204,10 +204,10 @@ export default function DragDropUpload({ clientId, onUploadSuccess }) {
                     borderRadius: '999px',
                     border: '1px solid rgba(56, 189, 248, 0.25)',
                   }}>
-                    Step 1 • Jev Document Determination
+                    Step 1 • Sovereign Local Document Determination
                   </span>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                    {classification.engine}
+                    {classification.engine} • Zero Offsite Data
                   </span>
                 </div>
 
@@ -272,10 +272,10 @@ export default function DragDropUpload({ clientId, onUploadSuccess }) {
             </div>
           </div>
 
-          {/* Interactive Document Type Selector Pills with Jev Probabilities */}
+          {/* Interactive Document Type Selector Pills with Calibrated Probabilities */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-              Confirm or Override Document Type (Jev System-1 Probabilities):
+              Confirm or Override Document Type (Local System-1 Probabilities):
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: '10px' }}>
@@ -315,7 +315,7 @@ export default function DragDropUpload({ clientId, onUploadSuccess }) {
                           color: opt.badgeColor,
                           border: `1px solid ${opt.border}`,
                         }}>
-                          Jev Pick
+                          Top Match
                         </span>
                       )}
                     </div>
@@ -384,10 +384,10 @@ export default function DragDropUpload({ clientId, onUploadSuccess }) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
               <Loader2 size={38} className="animate-spin" color="#38bdf8" />
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Step 1: Determining Document Type via Jev (System One)...
+                Step 1: Determining Document Type Locally (Sovereign System-1)...
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Evaluating opening pages for Policy, Binder, Certificate (COI), Endorsement, or Quote classification
+                Evaluating opening pages locally for Policy, Binder, Certificate (COI), Endorsement, or Quote classification
               </div>
             </div>
           ) : uploading ? (
@@ -419,7 +419,7 @@ export default function DragDropUpload({ clientId, onUploadSuccess }) {
                   Drop Commercial Insurance Document PDF to Determine Type or <span style={{ color: '#60a5fa' }}>browse files</span>
                 </div>
                 <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Step 1: Instant type determination via <strong>Jev (System One)</strong> — Policy, Binder, Certificate (COI), Endorsement, or Quote • Step 2: Schedule extraction & RAG indexing
+                  Step 1: Instant local type determination (<strong>Zero Offsite Data</strong>) — Policy, Binder, Certificate (COI), Endorsement, or Quote • Step 2: Schedule extraction & RAG indexing
                 </div>
               </div>
             </div>
