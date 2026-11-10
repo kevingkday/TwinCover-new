@@ -191,16 +191,16 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
           <div style={{
             marginTop: '14px',
             padding: '8px 14px',
-            background: 'rgba(59, 130, 246, 0.08)',
-            border: '1px solid rgba(59, 130, 246, 0.25)',
+            background: '#EFF6FF',
+            border: '1px solid #BFDBFE',
             borderRadius: 'var(--radius-md)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             fontSize: '12.5px',
-            color: '#93c5fd'
+            color: '#1E3A8A'
           }}>
-            <ShieldCheck size={16} color="#60a5fa" />
+            <ShieldCheck size={16} color="#2563EB" />
             <span>
               <strong>Word Letterhead Active:</strong> Official logos, executive headers, footers, and table styles from <em>{selectedTemplate.original_filename || selectedTemplate.name}</em> will be merged automatically when downloading .DOCX.
             </span>
@@ -271,10 +271,10 @@ export default function LetterGenerator({ client, policy, verifiedFields }) {
                 disabled={exporting}
                 className="btn btn-secondary btn-sm"
                 style={{
-                  borderColor: isDocxTemplate ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.4)',
-                  color: isDocxTemplate ? '#93c5fd' : '#60a5fa',
-                  background: isDocxTemplate ? 'rgba(59, 130, 246, 0.15)' : undefined,
-                  fontWeight: isDocxTemplate ? 600 : 400
+                  borderColor: isDocxTemplate ? '#3B82F6' : '#93C5FD',
+                  color: '#1D4ED8',
+                  background: isDocxTemplate ? '#EFF6FF' : undefined,
+                  fontWeight: isDocxTemplate ? 600 : 500
                 }}
                 title={isDocxTemplate ? "Render directly into broker's Word letterhead" : "Download executive formatted Word file"}
               >

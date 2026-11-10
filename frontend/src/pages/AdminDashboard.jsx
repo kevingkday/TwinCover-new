@@ -78,14 +78,14 @@ export default function AdminDashboard() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+            <span className="badge badge-blue">
               Live Platform Engagement
             </span>
-            <span style={{ fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '12px', color: '#047857', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} /> Local DB Active
             </span>
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', color: '#f8fafc' }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', color: '#0F172A' }}>
             Demo & Broker Engagement Overview
           </h1>
           <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
       </div>
 
       {error && (
-        <div className="glass-panel" style={{ padding: '16px', borderColor: 'rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5', marginBottom: '24px' }}>
+        <div className="glass-panel" style={{ padding: '16px', borderColor: 'var(--status-error-border)', background: 'var(--status-error-bg)', color: 'var(--status-error-text)', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <AlertCircle size={18} />
             <span>{error}</span>
@@ -122,11 +122,11 @@ export default function AdminDashboard() {
       }}>
         {/* Card 1 */}
         <div className="glass-panel" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#93c5fd', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#1D4ED8', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600 }}>Registered Brokers</span>
             <Users size={18} />
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#f8fafc' }}>
+          <div style={{ fontSize: '30px', fontWeight: 800, color: '#0F172A' }}>
             {loading ? '...' : (data?.metrics?.total_brokers ?? 0)}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -136,11 +136,11 @@ export default function AdminDashboard() {
 
         {/* Card 2 */}
         <div className="glass-panel" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#c084fc', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#6D28D9', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600 }}>Commercial Clients</span>
             <Building size={18} />
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#f8fafc' }}>
+          <div style={{ fontSize: '30px', fontWeight: 800, color: '#0F172A' }}>
             {loading ? '...' : (data?.metrics?.total_clients ?? 0)}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -150,11 +150,11 @@ export default function AdminDashboard() {
 
         {/* Card 3 */}
         <div className="glass-panel" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fbbf24', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#B45309', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600 }}>Policies Ingested</span>
             <FileText size={18} />
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#f8fafc' }}>
+          <div style={{ fontSize: '30px', fontWeight: 800, color: '#0F172A' }}>
             {loading ? '...' : (data?.metrics?.total_policies ?? 0)}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -164,11 +164,11 @@ export default function AdminDashboard() {
 
         {/* Card 4 */}
         <div className="glass-panel" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#34d399', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#047857', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600 }}>Verified Schedules</span>
             <CheckCircle2 size={18} />
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#f8fafc' }}>
+          <div style={{ fontSize: '30px', fontWeight: 800, color: '#0F172A' }}>
             {loading ? '...' : (data?.metrics?.total_verified_policies ?? 0)}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -178,11 +178,11 @@ export default function AdminDashboard() {
 
         {/* Card 5 */}
         <div className="glass-panel" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#f472b6', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#BE185D', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600 }}>Renewal Letters</span>
             <Sparkles size={18} />
           </div>
-          <div style={{ fontSize: '30px', fontWeight: 800, color: '#f8fafc' }}>
+          <div style={{ fontSize: '30px', fontWeight: 800, color: '#0F172A' }}>
             {loading ? '...' : (data?.metrics?.total_letters_generated ?? 0)}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -267,8 +267,8 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {filteredBrokers.map(b => (
-                  <tr key={b.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', fontSize: '13.5px' }}>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#f8fafc' }}>
+                  <tr key={b.id} style={{ borderBottom: '1px solid var(--border-subtle)', fontSize: '13.5px' }}>
+                    <td style={{ padding: '12px', fontWeight: 600, color: '#0F172A' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
                           width: '28px',
@@ -287,24 +287,24 @@ export default function AdminDashboard() {
                         {b.full_name}
                       </div>
                     </td>
-                    <td style={{ padding: '12px', color: '#cbd5e1' }}>
+                    <td style={{ padding: '12px', color: '#334155' }}>
                       {b.agency_name}
                     </td>
-                    <td style={{ padding: '12px', color: '#94a3b8', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+                    <td style={{ padding: '12px', color: '#64748B', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
                       {b.email}
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', padding: '2px 8px' }}>
+                      <span className="badge" style={{ background: '#EEF2FF', color: '#4338CA', padding: '2px 8px' }}>
                         {b.client_count}
                       </span>
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fcd34d', padding: '2px 8px' }}>
+                      <span className="badge" style={{ background: '#FEF3C7', color: '#B45309', padding: '2px 8px' }}>
                         {b.policy_count}
                       </span>
                     </td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span className="badge" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6', padding: '2px 8px' }}>
+                      <span className="badge" style={{ background: '#FCE7F3', color: '#BE185D', padding: '2px 8px' }}>
                         {b.letter_count}
                       </span>
                     </td>
@@ -344,8 +344,8 @@ export default function AdminDashboard() {
                 {filteredPolicies.map(p => {
                   const docMeta = getDocTypeMeta(p.document_type);
                   return (
-                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', fontSize: '13.5px' }}>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#93c5fd' }}>
+                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-subtle)', fontSize: '13.5px' }}>
+                    <td style={{ padding: '12px', fontWeight: 600, color: '#1D4ED8' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <FileText size={16} color={docMeta.badgeColor} />
                         <span>{p.filename}</span>
@@ -364,11 +364,11 @@ export default function AdminDashboard() {
                         {docMeta.label}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', color: '#f8fafc' }}>
+                    <td style={{ padding: '12px', fontWeight: 500, color: '#0F172A' }}>
                       {p.client_name}
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ color: '#cbd5e1' }}>{p.broker_name}</div>
+                      <div style={{ color: '#334155', fontWeight: 500 }}>{p.broker_name}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{p.broker_agency}</div>
                     </td>
                     <td style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>
@@ -376,15 +376,15 @@ export default function AdminDashboard() {
                     </td>
                     <td style={{ padding: '12px' }}>
                       {p.status === 'verified' ? (
-                        <span className="badge badge-success" style={{ fontSize: '11px' }}>
+                        <span className="badge badge-verified" style={{ fontSize: '11px' }}>
                           Verified
                         </span>
                       ) : p.status === 'processing' ? (
-                        <span className="badge badge-warning" style={{ fontSize: '11px' }}>
+                        <span className="badge badge-pending" style={{ fontSize: '11px' }}>
                           Processing
                         </span>
                       ) : (
-                        <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontSize: '11px' }}>
+                        <span className="badge badge-blue" style={{ fontSize: '11px' }}>
                           {p.status}
                         </span>
                       )}
@@ -421,18 +421,18 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {filteredLetters.map(l => (
-                  <tr key={l.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', fontSize: '13.5px' }}>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#f8fafc' }}>
+                  <tr key={l.id} style={{ borderBottom: '1px solid var(--border-subtle)', fontSize: '13.5px' }}>
+                    <td style={{ padding: '12px', fontWeight: 600, color: '#0F172A' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Sparkles size={15} color="#c084fc" />
+                        <Sparkles size={15} color="#7C3AED" />
                         <span>{l.title}</span>
                       </div>
                     </td>
-                    <td style={{ padding: '12px', color: '#93c5fd' }}>
+                    <td style={{ padding: '12px', fontWeight: 600, color: '#1D4ED8' }}>
                       {l.client_name}
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ color: '#cbd5e1' }}>{l.broker_name}</div>
+                      <div style={{ color: '#334155', fontWeight: 500 }}>{l.broker_name}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{l.broker_agency}</div>
                     </td>
                     <td style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>
@@ -456,8 +456,8 @@ export default function AdminDashboard() {
         {activeTab === 'database' && (
           <div>
             <div style={{
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.6))',
-              border: '1px solid var(--border-subtle)',
+              background: '#EFF6FF',
+              border: '1px solid #BFDBFE',
               borderRadius: 'var(--radius-lg)',
               padding: '18px 20px',
               marginBottom: '20px',
@@ -468,15 +468,15 @@ export default function AdminDashboard() {
               gap: '12px'
             }}>
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <HardDrive size={18} color="#60a5fa" />
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <HardDrive size={18} color="#2563EB" />
                   <span>Storage Engine: {data?.database_stats?.database_engine || 'SQLite / twincover.db'}</span>
                 </div>
-                <div style={{ fontSize: '12.5px', color: '#94a3b8', marginTop: '4px' }}>
+                <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px' }}>
                   Client data and policy schedules are saved locally on disk with zero cloud data retention.
                 </div>
               </div>
-              <span className="badge badge-success" style={{ padding: '4px 10px' }}>
+              <span className="badge badge-verified" style={{ padding: '4px 10px' }}>
                 Operational & Synced
               </span>
             </div>
@@ -484,50 +484,50 @@ export default function AdminDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
               <div className="glass-panel" style={{ padding: '16px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Table: users</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
                   {data?.database_stats?.users_table ?? 0} rows
                 </div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Broker tenant logins and credentials</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Broker tenant logins and credentials</div>
               </div>
 
               <div className="glass-panel" style={{ padding: '16px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Table: clients</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
                   {data?.database_stats?.clients_table ?? 0} rows
                 </div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Commercial insured client records</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Commercial insured client records</div>
               </div>
 
               <div className="glass-panel" style={{ padding: '16px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Table: policies</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
                   {data?.database_stats?.policies_table ?? 0} rows
                 </div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Commercial policy documents & OCR text</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Commercial policy documents & OCR text</div>
               </div>
 
               <div className="glass-panel" style={{ padding: '16px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Table: extracted_fields</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
                   {data?.database_stats?.extracted_fields_table ?? 0} rows
                 </div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Reconciled limits, terms & coverages</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Reconciled limits, terms & coverages</div>
               </div>
 
               <div className="glass-panel" style={{ padding: '16px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Table: letter_templates</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
                   {data?.database_stats?.letter_templates_table ?? 0} rows
                 </div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Standard Markdown & Word (.docx) letterheads</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Standard Markdown & Word (.docx) letterheads</div>
               </div>
 
               <div className="glass-panel" style={{ padding: '16px' }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Table: generated_letters</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>
+                <div style={{ fontSize: '22px', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
                   {data?.database_stats?.generated_letters_table ?? 0} rows
                 </div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Client proposal letters drafted & archived</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Client proposal letters drafted & archived</div>
               </div>
             </div>
           </div>

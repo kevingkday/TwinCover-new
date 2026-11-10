@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, FileText, Users, Activity, LogOut, CheckCircle, AlertCircle, RefreshCw, BarChart3 } from 'lucide-react';
+import {
+  Shield,
+  FileText,
+  Users,
+  Activity,
+  LogOut,
+  BarChart3,
+  Home,
+  Zap,
+  LogIn,
+} from 'lucide-react';
 import { authApi } from '../api/authApi';
 import { systemApi } from '../api/systemApi';
 
-export default function Navbar({ activePage, setActivePage, onOpenHealthModal }) {
+export default function Navbar({
+  activePage,
+  setActivePage,
+  onOpenHealthModal,
+  isAuthenticated,
+  onDemoLoginSuccess,
+}) {
   const user = authApi.getCurrentUser();
   const [health, setHealth] = useState(null);
+  const [launchingDemo, setLaunchingDemo] = useState(false);
 
   useEffect(() => {
     checkHealth();
@@ -27,124 +44,201 @@ export default function Navbar({ activePage, setActivePage, onOpenHealthModal })
     window.location.reload();
   };
 
+  const handleQuickDemo = async () => {
+    setLaunchingDemo(true);
+    try {
+      await authApi.login('broker@twincover.com', 'TwinCover2026!');
+      if (onDemoLoginSuccess) {
+        onDemoLoginSuccess();
+      }
+    } catch (e) {
+      setActivePage('login');
+    } finally {
+      setLaunchingDemo(false);
+    }
+  };
+
+  const navItemStyle = (isActive) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '6px 13px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: isActive ? 700 : 500,
+    background: isActive ? '#FFFFFF' : 'transparent',
+    color: isActive ? '#0F172A' : '#475569',
+    border: 'none',
+    boxShadow: isActive ? '0 1px 2px rgba(15, 23, 42, 0.08)' : 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  });
+
   return (
     <header style={{
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '12px 28px',
-      background: 'rgba(17, 24, 39, 0.85)',
-      backdropFilter: 'blur(10px)',
-      borderBottom: '1px solid var(--border-subtle)',
+      padding: '10px 24px',
+      background: 'rgba(255, 255, 255, 0.92)',
+      backdropFilter: 'blur(12px)',
+      borderBottom: '1px solid #E2E8F0',
       position: 'sticky',
       top: 0,
-      zIndex: 100
+      zIndex: 100,
+      flexWrap: 'wrap',
+      gap: '12px',
     }}>
-      {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
-        <div 
-          onClick={() => setActivePage('clients')}
+      {/* Left: Brand + TwinFlow-Style Segmented Nav Pill */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '22px', flexWrap: 'wrap' }}>
+        <div
+          onClick={() => setActivePage('home')}
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
         >
           <div style={{
             width: '36px',
             height: '36px',
             borderRadius: '10px',
-            background: 'linear-gradient(135deg, #2563eb, #6366f1)',
+            background: '#2563EB',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 10px rgba(37, 99, 235, 0.4)'
+            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
           }}>
-            <Shield size={20} color="#ffffff" />
+            <Shield size={20} color="#FFFFFF" />
           </div>
           <div>
-            <div style={{ fontSize: '17px', fontWeight: 700, letterSpacing: '-0.02em', color: '#ffffff' }}>
-              Twin<span style={{ color: '#60a5fa' }}>Cover</span>
+            <div style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '-0.02em', color: '#0F172A' }}>
+              Twin<span style={{ color: '#2563EB' }}>Cover</span>
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Commercial Risk Suite
+            <div style={{ fontSize: '10px', color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 700 }}>
+              Sovereign Risk Suite
             </div>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* Segmented Pill Navigation (TwinFlow Style) */}
+        <nav style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          background: '#F1F5F9',
+          padding: '4px',
+          borderRadius: '10px',
+          border: '1px solid #E2E8F0',
+        }}>
           <button
-            onClick={() => setActivePage('clients')}
-            className={`btn ${activePage === 'clients' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '13.5px', padding: '6px 14px' }}
+            type="button"
+            onClick={() => setActivePage('home')}
+            style={navItemStyle(activePage === 'home')}
           >
-            <Users size={16} />
-            Clients
+            <Home size={14} />
+            <span>Home</span>
           </button>
+
           <button
-            onClick={() => setActivePage('templates')}
-            className={`btn ${activePage === 'templates' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '13.5px', padding: '6px 14px' }}
+            type="button"
+            onClick={() => setActivePage(isAuthenticated ? 'clients' : 'login')}
+            style={navItemStyle(activePage === 'clients' || activePage === 'workspace')}
           >
-            <FileText size={16} />
-            Letter Templates
+            <Users size={14} />
+            <span>Clients & Intake</span>
           </button>
+
           <button
-            onClick={() => setActivePage('admin')}
-            className={`btn ${activePage === 'admin' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ fontSize: '13.5px', padding: '6px 14px' }}
+            type="button"
+            onClick={() => setActivePage(isAuthenticated ? 'templates' : 'login')}
+            style={navItemStyle(activePage === 'templates')}
           >
-            <BarChart3 size={16} />
-            Demo Analytics
+            <FileText size={14} />
+            <span>Letter Templates</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActivePage(isAuthenticated ? 'admin' : 'login')}
+            style={navItemStyle(activePage === 'admin')}
+          >
+            <BarChart3 size={14} />
+            <span>Demo Analytics</span>
           </button>
         </nav>
       </div>
 
       {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* System Health Pill */}
         <button
+          type="button"
           onClick={onOpenHealthModal}
           className="btn btn-secondary btn-sm"
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderColor: health ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'
+            background: health?.all_operational ? '#ECFDF5' : '#FFFBEB',
+            borderColor: health?.all_operational ? '#A7F3D0' : '#FDE68A',
+            color: health?.all_operational ? '#047857' : '#B45309',
+            borderRadius: '999px',
+            padding: '5px 12px',
           }}
-          title="Click to view Local AI & Microservice Connectivity"
+          title="Click to inspect Local Sovereign AI Node & Microservice Connectivity"
         >
           <span style={{
-            width: '8px',
-            height: '8px',
+            width: '7px',
+            height: '7px',
             borderRadius: '50%',
-            backgroundColor: health?.all_operational ? '#10b981' : '#f59e0b',
-            boxShadow: health?.all_operational ? '0 0 6px #10b981' : '0 0 6px #f59e0b'
+            backgroundColor: health?.all_operational ? '#10B981' : '#F59E0B',
           }} />
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-            System Core: {health?.all_operational ? 'Active' : 'Checking...'}
+          <span style={{ fontSize: '12px', fontWeight: 600 }}>
+            Sovereign Node: {health?.all_operational ? 'Online' : 'Checking...'}
           </span>
-          <Activity size={13} color="var(--text-muted)" />
+          <Activity size={13} />
         </button>
 
-        {/* User Info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {user?.full_name || 'Commercial Broker'}
+        {isAuthenticated ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '8px', borderLeft: '1px solid #E2E8F0' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                {user?.full_name || 'Commercial Broker'}
+              </div>
+              <div style={{ fontSize: '11px', color: '#64748B' }}>
+                {user?.agency_name || 'Apex Advisors'}
+              </div>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              {user?.agency_name || 'Apex Advisors'}
-            </div>
-          </div>
 
-          <button
-            onClick={handleLogout}
-            className="btn btn-ghost btn-sm"
-            style={{ padding: '7px', color: 'var(--text-muted)' }}
-            title="Sign Out"
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn btn-ghost btn-sm"
+              style={{ padding: '7px', color: '#64748B' }}
+              title="Sign Out"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setActivePage('login')}
+              className="btn btn-secondary btn-sm"
+            >
+              <LogIn size={14} />
+              <span>Sign In</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleQuickDemo}
+              disabled={launchingDemo}
+              className="btn btn-primary btn-sm"
+            >
+              <Zap size={14} />
+              <span>{launchingDemo ? 'Loading...' : 'Launch Demo'}</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

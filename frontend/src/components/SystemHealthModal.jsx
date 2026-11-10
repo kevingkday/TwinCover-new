@@ -54,7 +54,7 @@ export default function SystemHealthModal({ isOpen, onClose }) {
         ) : health ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* DB Card */}
-            <div className="glass-panel" style={{ padding: '14px 18px', background: 'rgba(255, 255, 255, 0.02)' }}>
+            <div className="glass-panel" style={{ padding: '14px 18px', background: '#F8FAFC' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Database size={18} color="#60a5fa" />
@@ -73,7 +73,7 @@ export default function SystemHealthModal({ isOpen, onClose }) {
 
             {/* Jev System One Document Classifier Card */}
             {health.jev_classifier && (
-              <div className="glass-panel" style={{ padding: '14px 18px', background: 'rgba(255, 255, 255, 0.02)' }}>
+              <div className="glass-panel" style={{ padding: '14px 18px', background: '#F8FAFC' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <Cpu size={18} color="#38bdf8" />
@@ -95,7 +95,7 @@ export default function SystemHealthModal({ isOpen, onClose }) {
             )}
 
             {/* Document Extractor Microservice Card */}
-            <div className="glass-panel" style={{ padding: '14px 18px', background: 'rgba(255, 255, 255, 0.02)' }}>
+            <div className="glass-panel" style={{ padding: '14px 18px', background: '#F8FAFC' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <FileText size={18} color="#a855f7" />
@@ -116,7 +116,7 @@ export default function SystemHealthModal({ isOpen, onClose }) {
             </div>
 
             {/* Ollama LLM Card */}
-            <div className="glass-panel" style={{ padding: '14px 18px', background: 'rgba(255, 255, 255, 0.02)' }}>
+            <div className="glass-panel" style={{ padding: '14px 18px', background: '#F8FAFC' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Cpu size={18} color="#34d399" />
@@ -137,7 +137,7 @@ export default function SystemHealthModal({ isOpen, onClose }) {
             </div>
 
             {/* ChromaDB Card */}
-            <div className="glass-panel" style={{ padding: '14px 18px', background: 'rgba(255, 255, 255, 0.02)' }}>
+            <div className="glass-panel" style={{ padding: '14px 18px', background: '#F8FAFC' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Database size={18} color="#f59e0b" />

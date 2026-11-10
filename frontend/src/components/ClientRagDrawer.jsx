@@ -42,16 +42,16 @@ export default function ClientRagDrawer({ client }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: 'rgba(37, 99, 235, 0.05)',
-        borderColor: 'rgba(59, 130, 246, 0.2)'
+        background: '#EFF6FF',
+        borderColor: '#BFDBFE'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Shield size={18} color="#60a5fa" />
+          <Shield size={18} color="#2563EB" />
           <div>
-            <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#f8fafc' }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0F172A' }}>
               Client-Isolated Policy Intelligence
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               Queries strictly query <code>client_{client.id}</code> Chroma collection. Zero cross-client data leakage.
             </div>
           </div>
@@ -98,7 +98,7 @@ export default function ClientRagDrawer({ client }) {
               onClick={() => handleQuery(sq)}
               className="badge"
               style={{
-                background: 'rgba(255, 255, 255, 0.04)',
+                background: '#F8FAFC',
                 color: 'var(--text-secondary)',
                 border: '1px solid var(--border-subtle)',
                 cursor: 'pointer',
@@ -142,11 +142,11 @@ export default function ClientRagDrawer({ client }) {
               borderBottom: '1px solid var(--border-subtle)',
               paddingBottom: '8px'
             }}>
-              <div style={{ fontSize: '14.5px', fontWeight: 600, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={16} color="#60a5fa" />
+              <div style={{ fontSize: '14.5px', fontWeight: 700, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={16} color="#2563EB" />
                 Coverage Analysis & Policy Response
               </div>
-              <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.04)', color: 'var(--text-muted)' }}>
+              <span className="badge" style={{ background: '#F1F5F9', color: 'var(--text-secondary)' }}>
                 Model: {result.model_used}
               </span>
             </div>
@@ -154,11 +154,14 @@ export default function ClientRagDrawer({ client }) {
             <div style={{
               fontSize: '14.5px',
               lineHeight: 1.65,
-              color: '#e2e8f0',
+              color: '#0F172A',
               padding: '14px 18px',
-              background: 'rgba(15, 23, 42, 0.6)',
+              background: '#F8FAFC',
               borderRadius: 'var(--radius-md)',
-              borderLeft: '4px solid #3b82f6',
+              borderLeft: '4px solid #2563EB',
+              borderTop: '1px solid #E2E8F0',
+              borderRight: '1px solid #E2E8F0',
+              borderBottom: '1px solid #E2E8F0',
               whiteSpace: 'pre-wrap'
             }}>
               {result.answer}
@@ -188,7 +191,7 @@ export default function ClientRagDrawer({ client }) {
                     <div
                       key={idx}
                       style={{
-                        background: 'rgba(255, 255, 255, 0.02)',
+                        background: '#FFFFFF',
                         border: '1px solid var(--border-subtle)',
                         borderRadius: 'var(--radius-md)',
                         overflow: 'hidden'
@@ -202,11 +205,11 @@ export default function ClientRagDrawer({ client }) {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           cursor: 'pointer',
-                          background: isExpanded ? 'rgba(255, 255, 255, 0.04)' : 'transparent'
+                          background: isExpanded ? '#F8FAFC' : 'transparent'
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <FileCheck size={16} color="#60a5fa" />
+                          <FileCheck size={16} color="#2563EB" />
                           <div>
                             <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)' }}>
                               {src.section_title || 'Policy Section'}
@@ -231,10 +234,10 @@ export default function ClientRagDrawer({ client }) {
                         <div style={{
                           padding: '14px 18px',
                           borderTop: '1px solid var(--border-subtle)',
-                          background: 'rgba(10, 15, 26, 0.8)',
+                          background: '#F8FAFC',
                           fontSize: '12.5px',
                           fontFamily: 'var(--font-mono)',
-                          color: '#cbd5e1',
+                          color: '#1E293B',
                           lineHeight: 1.6,
                           whiteSpace: 'pre-wrap'
                         }}>

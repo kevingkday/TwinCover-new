@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import SystemHealthModal from './components/SystemHealthModal';
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ClientsList from './pages/ClientsList';
@@ -11,8 +12,7 @@ import { authApi } from './api/authApi';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(authApi.isAuthenticated());
-  const [authView, setAuthView] = useState('login'); // 'login' | 'register'
-  const [activePage, setActivePage] = useState('clients'); // 'clients' | 'workspace' | 'templates' | 'admin'
+  const [activePage, setActivePage] = useState('home'); // 'home' | 'clients' | 'workspace' | 'templates' | 'admin' | 'login' | 'register'
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
 
@@ -30,23 +30,6 @@ export default function App() {
     setActivePage('workspace');
   };
 
-  if (!isAuthenticated) {
-    if (authView === 'register') {
-      return (
-        <Register
-          onRegisterSuccess={handleLoginSuccess}
-          onSwitchToLogin={() => setAuthView('login')}
-        />
-      );
-    }
-    return (
-      <Login
-        onLoginSuccess={handleLoginSuccess}
-        onSwitchToRegister={() => setAuthView('register')}
-      />
-    );
-  }
-
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column' }}>
       <Navbar
@@ -58,14 +41,39 @@ export default function App() {
           }
         }}
         onOpenHealthModal={() => setIsHealthModalOpen(true)}
+        isAuthenticated={isAuthenticated}
+        onDemoLoginSuccess={handleLoginSuccess}
       />
 
       <main className="main-content">
-        {activePage === 'clients' && (
+        {activePage === 'home' && (
+          <LandingPage
+            isAuthenticated={isAuthenticated}
+            onLaunchWorkspace={() => setActivePage('clients')}
+            onOpenAuth={(mode) => setActivePage(mode === 'register' ? 'register' : 'login')}
+            onDemoLoginSuccess={handleLoginSuccess}
+          />
+        )}
+
+        {activePage === 'login' && (
+          <Login
+            onLoginSuccess={handleLoginSuccess}
+            onSwitchToRegister={() => setActivePage('register')}
+          />
+        )}
+
+        {activePage === 'register' && (
+          <Register
+            onRegisterSuccess={handleLoginSuccess}
+            onSwitchToLogin={() => setActivePage('login')}
+          />
+        )}
+
+        {activePage === 'clients' && isAuthenticated && (
           <ClientsList onSelectClient={handleOpenClientWorkspace} />
         )}
 
-        {activePage === 'workspace' && selectedClientId && (
+        {activePage === 'workspace' && isAuthenticated && selectedClientId && (
           <ClientWorkspace
             clientId={selectedClientId}
             onBack={() => {
@@ -75,11 +83,11 @@ export default function App() {
           />
         )}
 
-        {activePage === 'templates' && (
+        {activePage === 'templates' && isAuthenticated && (
           <TemplateEditor />
         )}
 
-        {activePage === 'admin' && (
+        {activePage === 'admin' && isAuthenticated && (
           <AdminDashboard />
         )}
       </main>

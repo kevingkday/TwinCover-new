@@ -47,7 +47,7 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
           }}>
             <Shield size={24} color="#ffffff" />
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#f8fafc' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A' }}>
             Register Broker Account
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -153,7 +153,7 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
           Already registered?{' '}
           <span
             onClick={onSwitchToLogin}
-            style={{ color: '#60a5fa', cursor: 'pointer', fontWeight: 600 }}
+            style={{ color: '#2563EB', cursor: 'pointer', fontWeight: 700 }}
           >
             Sign In
           </span>

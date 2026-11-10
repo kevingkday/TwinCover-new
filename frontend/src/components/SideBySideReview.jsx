@@ -223,9 +223,9 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(255, 255, 255, 0.02)'
+            background: '#F8FAFC'
           }}>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>Extracted Policy Text & Schedules</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Extracted Policy Text & Schedules</div>
             
             <div style={{ position: 'relative', width: '220px' }}>
               <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-muted)' }} />
@@ -247,8 +247,8 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
             fontFamily: 'var(--font-mono)',
             fontSize: '12.5px',
             lineHeight: 1.6,
-            color: '#cbd5e1',
-            background: 'rgba(10, 15, 26, 0.6)',
+            color: '#1E293B',
+            background: '#F8FAFC',
             whiteSpace: 'pre-wrap',
             userSelect: 'text'
           }}>
@@ -264,9 +264,9 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(255, 255, 255, 0.02)'
+            background: '#F8FAFC'
           }}>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>
               Extracted Schedule Verification Form
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -283,7 +283,7 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
-                color: '#60a5fa',
+                color: '#1D4ED8',
                 marginBottom: '12px',
                 display: 'flex',
                 alignItems: 'center',
@@ -362,7 +362,7 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
                     value={fields.total_premium}
                     onChange={handleChange}
                     className="form-input mono"
-                    style={{ fontSize: '15px', fontWeight: 600, color: '#34d399' }}
+                    style={{ fontSize: '15px', fontWeight: 700, color: '#047857' }}
                     placeholder="e.g. $42,850.00"
                   />
                 </div>
@@ -380,13 +380,13 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
                 borderBottom: '1px solid var(--border-subtle)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Layers size={15} color="#38bdf8" />
+                  <Layers size={15} color="#0284C7" />
                   <span style={{
                     fontSize: '12.5px',
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                    color: '#38bdf8'
+                    color: '#0284C7'
                   }}>
                     Policy Coverages & Limits
                   </span>
@@ -394,8 +394,8 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
                     fontSize: '11px',
                     padding: '2px 8px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'rgba(56, 189, 248, 0.12)',
-                    color: '#38bdf8',
+                    background: '#E0F2FE',
+                    color: '#0369A1',
                     fontWeight: 600
                   }}>
                     {fields.coverages?.length || 0} Lines Identified
@@ -412,8 +412,8 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
-                    color: '#60a5fa',
-                    borderColor: 'rgba(96, 165, 250, 0.3)'
+                    color: '#1D4ED8',
+                    borderColor: '#BFDBFE'
                   }}
                 >
                   <Plus size={13} />
@@ -428,7 +428,7 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
                     <div
                       key={idx}
                       style={{
-                        background: 'rgba(255, 255, 255, 0.025)',
+                        background: '#F8FAFC',
                         border: '1px solid var(--border-subtle)',
                         borderRadius: 'var(--radius-md)',
                         padding: '12px 14px',
@@ -440,7 +440,7 @@ export default function SideBySideReview({ policy, onFieldsSaved, onNavigateToLe
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                          <Shield size={14} color="#60a5fa" />
+                          <Shield size={14} color="#2563EB" />
                           <input
                             type="text"
                             value={cov.name || ''}

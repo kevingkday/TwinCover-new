@@ -136,7 +136,7 @@ export default function ClientWorkspace({ clientId, onBack }) {
 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h1 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em', color: '#f8fafc' }}>
+                <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em', color: '#0F172A' }}>
                   {client.name}
                 </h1>
                 <span className="badge badge-blue">
@@ -161,7 +161,7 @@ export default function ClientWorkspace({ clientId, onBack }) {
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                 Policies Ingested
               </div>
-              <div style={{ fontSize: '18px', fontWeight: 700, color: '#f8fafc' }}>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
                 {policies.length} Document{policies.length !== 1 ? 's' : ''}
               </div>
             </div>
@@ -170,7 +170,7 @@ export default function ClientWorkspace({ clientId, onBack }) {
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                 Vector Space
               </div>
-              <div style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', color: '#60a5fa' }}>
+              <div style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#2563EB' }}>
                 client_{client.id}
               </div>
             </div>
@@ -289,7 +289,7 @@ export default function ClientWorkspace({ clientId, onBack }) {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <FileText size={16} color={docMeta.badgeColor} />
-                          <span style={{ fontWeight: 600, color: '#f8fafc' }}>{p.filename}</span>
+                          <span style={{ fontWeight: 600, color: '#0F172A' }}>{p.filename}</span>
                         </div>
                       </td>
                       <td>
@@ -440,7 +440,7 @@ export default function ClientWorkspace({ clientId, onBack }) {
                 {lettersHistory.map(letItem => (
                   <tr key={letItem.id}>
                     <td>
-                      <div style={{ fontWeight: 600, color: '#f8fafc' }}>{letItem.title}</div>
+                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{letItem.title}</div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {letItem.content.slice(0, 100)}...
                       </div>

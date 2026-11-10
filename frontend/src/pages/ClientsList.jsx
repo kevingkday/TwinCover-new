@@ -105,10 +105,10 @@ export default function ClientsList({ onSelectClient }) {
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
             Active Accounts
           </div>
-          <div style={{ fontSize: '26px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: '#0F172A', marginTop: '6px' }}>
             {totalClients}
           </div>
-          <div style={{ fontSize: '12px', color: '#60a5fa', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: '#2563EB', fontWeight: 500, marginTop: '4px' }}>
             Commercial Policyholders
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function ClientsList({ onSelectClient }) {
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
             Policies Ingested
           </div>
-          <div style={{ fontSize: '26px', fontWeight: 700, color: '#f8fafc', marginTop: '6px' }}>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: '#0F172A', marginTop: '6px' }}>
             {totalPolicies}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
@@ -129,10 +129,10 @@ export default function ClientsList({ onSelectClient }) {
           <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
             Verified Schedules
           </div>
-          <div style={{ fontSize: '26px', fontWeight: 700, color: '#34d399', marginTop: '6px' }}>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: '#047857', marginTop: '6px' }}>
             {totalVerified}
           </div>
-          <div style={{ fontSize: '12px', color: '#34d399', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: '#047857', fontWeight: 500, marginTop: '4px' }}>
             Audited & Confirmed by Broker
           </div>
         </div>
@@ -188,7 +188,7 @@ export default function ClientsList({ onSelectClient }) {
               {clients.map(c => (
                 <tr key={c.id}>
                   <td>
-                    <div style={{ fontWeight: 600, color: '#f8fafc', fontSize: '14.5px' }}>
+                    <div style={{ fontWeight: 600, color: '#0F172A', fontSize: '14.5px' }}>
                       {c.name}
                     </div>
                     {c.notes && (
@@ -198,7 +198,7 @@ export default function ClientsList({ onSelectClient }) {
                     )}
                   </td>
                   <td>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#93c5fd' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: '#1D4ED8' }}>
                       {c.account_number}
                     </span>
                   </td>

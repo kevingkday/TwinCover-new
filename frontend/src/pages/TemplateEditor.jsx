@@ -197,7 +197,7 @@ export default function TemplateEditor() {
           <button 
             onClick={() => setShowUploadModal(true)} 
             className="btn btn-secondary" 
-            style={{ padding: '8px 16px', borderColor: 'rgba(59, 130, 246, 0.4)', color: '#93c5fd' }}
+            style={{ padding: '8px 16px', borderColor: '#93C5FD', color: '#1D4ED8' }}
           >
             <Upload size={16} /> Upload Word (.docx)
           </button>
@@ -224,23 +224,23 @@ export default function TemplateEditor() {
                 style={{
                   padding: '12px 14px',
                   borderRadius: 'var(--radius-md)',
-                  background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.02)',
-                  border: isSelected ? '1px solid #3b82f6' : '1px solid var(--border-subtle)',
+                  background: isSelected ? '#EFF6FF' : '#F8FAFC',
+                  border: isSelected ? '1px solid #3B82F6' : '1px solid var(--border-subtle)',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: isSelected ? '#93c5fd' : '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: isSelected ? '#1D4ED8' : '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {tmpl.name}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                     {isTmplDocx ? (
-                      <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', fontSize: '10px', padding: '1px 5px', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
+                      <span className="badge" style={{ background: '#DBEAFE', color: '#1D4ED8', fontSize: '10px', padding: '1px 5px', border: '1px solid #93C5FD' }}>
                         DOCX
                       </span>
                     ) : (
-                      <span className="badge" style={{ background: 'rgba(148, 163, 184, 0.15)', color: '#cbd5e1', fontSize: '10px', padding: '1px 5px' }}>
+                      <span className="badge" style={{ background: '#E2E8F0', color: '#334155', fontSize: '10px', padding: '1px 5px' }}>
                         MD
                       </span>
                     )}
@@ -273,7 +273,7 @@ export default function TemplateEditor() {
                 {isDocx ? 'Available Merge Fields in Word Templates (Click to copy token):' : 'Available Verified Policy Tokens (Click to insert):'}
               </div>
               {copiedToken && (
-                <span style={{ fontSize: '12px', color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '12px', color: '#047857', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Check size={13} /> Copied {copiedToken} to clipboard!
                 </span>
               )}
@@ -286,9 +286,9 @@ export default function TemplateEditor() {
                   onClick={() => insertTokenIntoContent(t.token)}
                   className="badge"
                   style={{
-                    background: t.token === '{{coverages_table}}' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.1)',
-                    border: t.token === '{{coverages_table}}' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(59, 130, 246, 0.25)',
-                    color: t.token === '{{coverages_table}}' ? '#6ee7b7' : '#93c5fd',
+                    background: t.token === '{{coverages_table}}' ? '#ECFDF5' : '#EFF6FF',
+                    border: t.token === '{{coverages_table}}' ? '1px solid #6EE7B7' : '1px solid #BFDBFE',
+                    color: t.token === '{{coverages_table}}' ? '#047857' : '#1D4ED8',
                     cursor: 'pointer',
                     padding: '3px 8px',
                     fontFamily: 'var(--font-mono)',
@@ -309,8 +309,8 @@ export default function TemplateEditor() {
           {/* DOCX Template Info & Actions Banner */}
           {isDocx && selectedTemplate && (
             <div style={{
-              background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.2), rgba(15, 23, 42, 0.4))',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
+              background: '#EFF6FF',
+              border: '1px solid #BFDBFE',
               borderRadius: 'var(--radius-lg)',
               padding: '18px 20px',
               display: 'flex',
@@ -321,15 +321,15 @@ export default function TemplateEditor() {
             }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <FileText size={18} color="#60a5fa" />
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#f8fafc' }}>
+                  <FileText size={18} color="#2563EB" />
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#0F172A' }}>
                     {selectedTemplate.name}
                   </span>
-                  <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
+                  <span className="badge" style={{ background: '#DBEAFE', color: '#1D4ED8', border: '1px solid #93C5FD' }}>
                     Word .docx Letterhead
                   </span>
                 </div>
-                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>
+                <p style={{ fontSize: '13px', color: '#334155', margin: 0 }}>
                   This Word template uses your firm's official corporate letterhead, logo banners, footers, and typography.
                   Variables like <code>&#123;&#123;coverages_table&#125;&#125;</code> and <code>&#123;&#123;insured_name&#125;&#125;</code> are rendered directly into the file upon export.
                 </p>
@@ -345,7 +345,7 @@ export default function TemplateEditor() {
                   type="button"
                   onClick={() => handleDownloadDocx(selectedTemplate)}
                   className="btn btn-secondary"
-                  style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#60a5fa' }}
+                  style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#1D4ED8' }}
                 >
                   <Download size={15} /> Download .docx Template
                 </button>
@@ -429,8 +429,8 @@ export default function TemplateEditor() {
                   fontFamily: 'var(--font-mono)',
                   fontSize: '13px',
                   lineHeight: 1.6,
-                  opacity: isDocx ? 0.8 : 1,
-                  background: isDocx ? 'rgba(15, 23, 42, 0.5)' : undefined
+                  opacity: isDocx ? 0.85 : 1,
+                  background: isDocx ? '#F8FAFC' : undefined
                 }}
               />
             </div>
@@ -512,15 +512,15 @@ export default function TemplateEditor() {
 
             {/* Merge Fields Tip Banner */}
             <div style={{
-              background: 'rgba(59, 130, 246, 0.08)',
-              border: '1px solid rgba(59, 130, 246, 0.25)',
+              background: '#EFF6FF',
+              border: '1px solid #BFDBFE',
               borderRadius: 'var(--radius-md)',
               padding: '12px 14px',
               fontSize: '12.5px',
-              color: '#cbd5e1',
+              color: '#334155',
               marginBottom: '18px'
             }}>
-              <strong style={{ color: '#93c5fd' }}>How to prepare your Word template:</strong>
+              <strong style={{ color: '#1E3A8A' }}>How to prepare your Word template:</strong>
               <div style={{ marginTop: '4px', lineHeight: 1.5 }}>
                 Insert Jinja tokens directly into your Word paragraphs or table cells, such as <code>&#123;&#123;insured_name&#125;&#125;</code>, <code>&#123;&#123;policy_number&#125;&#125;</code>, <code>&#123;&#123;coverages_table&#125;&#125;</code>, and <code>&#123;&#123;total_premium&#125;&#125;</code>. All logos and styles are 100% preserved!
               </div>
@@ -593,19 +593,19 @@ export default function TemplateEditor() {
                     }}
                     style={{ display: 'none' }}
                   />
-                  <FileText size={32} style={{ margin: '0 auto 8px', color: uploadFormData.file ? '#60a5fa' : '#64748b' }} />
+                  <FileText size={32} style={{ margin: '0 auto 8px', color: uploadFormData.file ? '#2563EB' : '#64748b' }} />
                   {uploadFormData.file ? (
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>
                         {uploadFormData.file.name}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+                      <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
                         {(uploadFormData.file.size / 1024).toFixed(1)} KB — Click to change file
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#f8fafc' }}>
+                      <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#0F172A' }}>
                         Click to select Word document (.docx)
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>

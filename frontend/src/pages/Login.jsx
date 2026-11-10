@@ -52,8 +52,8 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
           }}>
             <Shield size={26} color="#ffffff" />
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#f8fafc', letterSpacing: '-0.02em' }}>
-            Twin<span style={{ color: '#60a5fa' }}>Cover</span>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
+            Twin<span style={{ color: '#2563EB' }}>Cover</span>
           </h1>
           <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginTop: '4px' }}>
             Commercial Insurance Broker Policy Verification Suite
@@ -128,7 +128,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
             type="button"
             onClick={handleUseDemo}
             className="btn btn-secondary btn-sm"
-            style={{ width: '100%', gap: '6px', fontSize: '12.5px', background: 'rgba(59, 130, 246, 0.08)', color: '#93c5fd' }}
+            style={{ width: '100%', gap: '6px', fontSize: '12.5px', background: '#EFF6FF', color: '#1D4ED8', borderColor: '#BFDBFE' }}
           >
             <KeyRound size={14} />
             Fill Demo Principal Account (broker@twincover.com)
@@ -140,7 +140,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
           Need an account?{' '}
           <span
             onClick={onSwitchToRegister}
-            style={{ color: '#60a5fa', cursor: 'pointer', fontWeight: 600 }}
+            style={{ color: '#2563EB', cursor: 'pointer', fontWeight: 700 }}
           >
             Create Broker Account
           </span>
