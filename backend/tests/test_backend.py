@@ -71,7 +71,7 @@ def test_client_crud():
     reg_resp = client.post("/api/auth/register", json={
         "email": email,
         "password": "TwinCover2026!",
-        "full_name": "Kevin Broker",
+        "full_name": "Morgan Broker",
         "agency_name": "Apex Commercial Brokerage"
     })
     assert reg_resp.status_code == 201

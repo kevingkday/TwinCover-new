@@ -201,13 +201,17 @@ def init_db():
             demo_user = User(
                 email=demo_email,
                 hashed_password=get_password_hash("TwinCover2026!"),
-                full_name="Kevin Day, Senior Principal",
+                full_name="Morgan Mercer, Senior Principal",
                 agency_name="Apex Commercial Brokerage Partners"
             )
             db.add(demo_user)
             db.commit()
             db.refresh(demo_user)
             logger.info(f"Demo broker user seeded: {demo_email}")
+        elif demo_user.full_name == "Kevin Day, Senior Principal":
+            demo_user.full_name = "Morgan Mercer, Senior Principal"
+            db.commit()
+            db.refresh(demo_user)
 
         # 3. Seed Demo Clients if none exist
         demo_client = db.query(Client).filter(Client.user_id == demo_user.id).first()
