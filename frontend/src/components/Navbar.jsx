@@ -76,22 +76,9 @@ export default function Navbar({
   });
 
   return (
-    <header style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '10px 24px',
-      background: 'rgba(255, 255, 255, 0.92)',
-      backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid #E2E8F0',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      flexWrap: 'wrap',
-      gap: '12px',
-    }}>
+    <header className="navbar-header">
       {/* Left: Brand + TwinFlow-Style Segmented Nav Pill */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '22px', flexWrap: 'wrap' }}>
+      <div className="navbar-left">
         <div
           onClick={() => setActivePage('home')}
           style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
@@ -119,18 +106,7 @@ export default function Navbar({
         </div>
 
         {/* Segmented Pill Navigation (TwinFlow Style) */}
-        <nav style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          background: '#F1F5F9',
-          padding: '4px',
-          borderRadius: '10px',
-          border: '1px solid #E2E8F0',
-          maxWidth: '100%',
-          overflowX: 'auto',
-          whiteSpace: 'nowrap',
-        }}>
+        <nav className="navbar-nav">
           <button
             type="button"
             onClick={() => setActivePage('home')}
@@ -179,7 +155,7 @@ export default function Navbar({
       </div>
 
       {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="navbar-right">
         {/* System Health Pill */}
         <button
           type="button"
