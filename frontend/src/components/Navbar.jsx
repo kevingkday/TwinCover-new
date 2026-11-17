@@ -127,6 +127,9 @@ export default function Navbar({
           padding: '4px',
           borderRadius: '10px',
           border: '1px solid #E2E8F0',
+          maxWidth: '100%',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
         }}>
           <button
             type="button"

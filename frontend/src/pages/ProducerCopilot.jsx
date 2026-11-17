@@ -157,6 +157,13 @@ export default function ProducerCopilot({ initialClientId = null }) {
     initial_note: '',
   });
   const cameraInputRef = useRef(null);
+  const workspaceRef = useRef(null);
+
+  const scrollToWorkspace = () => {
+    setTimeout(() => {
+      workspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+  };
 
   const refreshPendingOffline = async () => {
     const items = await offlineCaptureQueue.listPendingCaptures();
@@ -390,6 +397,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
       setSubmissions((prev) => [created, ...prev]);
       setSelectedSub(created);
       setActiveTab('capture');
+      scrollToWorkspace();
       // Refresh client list so the new client appears in dropdowns too
       clientsApi.listClients().then(setClients).catch(() => {});
     } catch (err) {
@@ -908,7 +916,12 @@ export default function ProducerCopilot({ initialClientId = null }) {
               return (
                 <div
                   key={sub.id}
-                  onClick={() => setSelectedSub(sub)}
+                  onClick={() => {
+                    setSelectedSub(sub);
+                    if (window.innerWidth <= 960) {
+                      scrollToWorkspace();
+                    }
+                  }}
                   style={{
                     padding: '12px 14px',
                     borderRadius: '10px',
@@ -977,7 +990,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
 
         {/* Right Column: Selected Submission Workspace */}
         {selectedSub ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div ref={workspaceRef} style={{ display: 'flex', flexDirection: 'column', gap: '18px', scrollMarginTop: '84px' }}>
             {/* Deal Header + 7-Stage Pipeline Bar */}
             <div className="glass-panel" style={{ padding: '20px 24px' }}>
               <div
