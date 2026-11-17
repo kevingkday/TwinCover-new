@@ -18,6 +18,12 @@ class User(Base):
 
     clients = relationship("Client", back_populates="user", cascade="all, delete-orphan")
     letter_templates = relationship("LetterTemplate", back_populates="user")
+    submissions = relationship(
+        "Submission",
+        back_populates="broker",
+        foreign_keys="Submission.broker_id",
+        cascade="all, delete-orphan"
+    )
 
 
 class Client(Base):
@@ -38,6 +44,7 @@ class Client(Base):
     user = relationship("User", back_populates="clients")
     policies = relationship("Policy", back_populates="client", cascade="all, delete-orphan")
     generated_letters = relationship("GeneratedLetter", back_populates="client", cascade="all, delete-orphan")
+    submissions = relationship("Submission", back_populates="client", cascade="all, delete-orphan")
 
 
 class Policy(Base):
@@ -120,3 +127,140 @@ class GeneratedLetter(Base):
     client = relationship("Client", back_populates="generated_letters")
     policy = relationship("Policy", back_populates="generated_letters")
     template = relationship("LetterTemplate", back_populates="generated_letters")
+
+
+# ==============================================================================
+# Phase 1: Pre-Bind "Field-to-Underwriter" Producer Copilot Entities
+# ==============================================================================
+
+class Submission(Base):
+    """
+    Deal & Submission Pipeline (`submissions`).
+    Tracks pre-bind commercial insurance deals across stages:
+    field_capture -> drafted -> submitted -> underwriter_review -> quote_received -> subjectivities -> bound
+    """
+    __tablename__ = "submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    broker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=False, index=True)
+    specialty_line = Column(
+        String(100),
+        nullable=False,
+        default="general_commercial",
+        index=True
+    )  # construction, cyber_ai, marine, environmental, general_commercial
+    status = Column(
+        String(50),
+        nullable=False,
+        default="field_capture",
+        index=True
+    )  # field_capture, drafted, submitted, underwriter_review, quote_received, subjectivities, bound
+    structured_risk_profile = Column(Text, nullable=True)  # JSON array of source-cited underwriting fields
+    underwriter_narrative = Column(Text, nullable=True)    # Markdown pre-bind submission narrative
+    missing_info_checklist = Column(Text, nullable=True)   # JSON array of missing underwriting items
+    client_followup_draft = Column(Text, nullable=True)    # Ready-to-send client follow-up email/text
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    verified_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    client = relationship("Client", back_populates="submissions")
+    broker = relationship("User", back_populates="submissions", foreign_keys=[broker_id])
+    verifier = relationship("User", foreign_keys=[verified_by])
+    evidence_artifacts = relationship(
+        "EvidenceArtifact",
+        back_populates="submission",
+        cascade="all, delete-orphan",
+        order_by="EvidenceArtifact.captured_at.asc()"
+    )
+    market_placements = relationship(
+        "MarketPlacement",
+        back_populates="submission",
+        cascade="all, delete-orphan",
+        order_by="MarketPlacement.updated_at.desc()"
+    )
+    jobs = relationship(
+        "SubmissionJob",
+        back_populates="submission",
+        cascade="all, delete-orphan",
+        order_by="SubmissionJob.created_at.desc()"
+    )
+
+
+class EvidenceArtifact(Base):
+    """
+    Immutable E&O Raw Evidence Vault (`evidence_artifacts`).
+    Stores original uploaded site photos, voice recordings, expiring policy PDFs,
+    SOVs/loss runs, and quick-paste text notes immutably (never overwritten or deleted after AI extraction).
+    """
+    __tablename__ = "evidence_artifacts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    broker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    artifact_type = Column(
+        String(50),
+        nullable=False,
+        index=True
+    )  # photo, audio, pdf, spreadsheet, text_note
+    file_path = Column(String(500), nullable=False)
+    raw_text_or_transcript = Column(Text, nullable=True)  # JSON with timestamps / page numbers / vision observations
+    captured_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    metadata_json = Column(Text, nullable=True)  # JSON with original_filename, file_size, sha256_hash, is_immutable: true
+
+    submission = relationship("Submission", back_populates="evidence_artifacts")
+
+
+class MarketPlacement(Base):
+    """
+    Carrier Placement Matrix (`market_placements`).
+    Tracks target insurers/MGAs per pre-bind submission.
+    """
+    __tablename__ = "market_placements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    broker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    carrier_name = Column(String(255), nullable=False)
+    target_line = Column(String(100), nullable=False)
+    status = Column(
+        String(50),
+        nullable=False,
+        default="drafted"
+    )  # drafted, submitted, underwriter_review, quote_received, declined, subjectivities, bound
+    quoted_premium = Column(String(100), nullable=True)
+    quote_summary_json = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    submission = relationship("Submission", back_populates="market_placements")
+
+
+class SubmissionJob(Base):
+    """
+    SQLite-backed Asynchronous Background Job Queue (`submission_jobs`).
+    Allows multi-photo + voice memo + PDF captures to return an instant 'Processing Capture'
+    receipt while background extraction runs and updates status for polling via GET /api/jobs/{job_id}.
+    """
+    __tablename__ = "submission_jobs"
+
+    id = Column(String(64), primary_key=True, index=True)
+    submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    broker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    job_type = Column(String(50), nullable=False, default="capture_ingestion")
+    status = Column(String(50), nullable=False, default="queued", index=True)  # queued, processing, completed, failed
+    progress = Column(Integer, nullable=False, default=0)
+    current_step = Column(String(255), nullable=False, default="Processing Capture")
+    payload_json = Column(Text, nullable=True)
+    result_json = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    submission = relationship("Submission", back_populates="jobs")

@@ -202,23 +202,23 @@ export default function LandingPage({
           color: '#0F172A',
           letterSpacing: '-0.03em',
           lineHeight: 1.12,
-          maxWidth: '900px',
+          maxWidth: '940px',
           marginBottom: '20px',
         }}>
-          Turn Carrier Policies, Binders & COIs into{' '}
-          <span style={{ color: '#2563EB' }}>Verified Client Deliverables</span>{' '}
-          in Seconds.
+          The Pre-Bind{' '}
+          <span style={{ color: '#2563EB' }}>"Field-to-Underwriter" Producer Copilot</span>{' '}
+          & Sovereign Risk Suite.
         </h1>
 
         {/* Subtitle */}
         <p style={{
           fontSize: '17px',
           color: '#475569',
-          maxWidth: '720px',
+          maxWidth: '760px',
           lineHeight: 1.6,
           marginBottom: '32px',
         }}>
-          Commercial insurance brokers spend hours manually checking 60-page renewal declarations and re-typing coverage schedules into client letters. TwinCover classifies incoming documents, extracts structured limits on your local sovereign GPU node, provides side-by-side verification, and exports polished Word (<code>.docx</code>) client advisories.
+          Built for Canadian commercial insurance producers across Construction/Wrap-Up, Cyber/Tech E&O/AI Liability, Marine, and Environmental lines. Capture site photos, voice walkthrough memos (<code>faster-whisper</code>), and schedules into an <strong>Immutable E&O Raw Evidence Vault</strong>, synthesize source-cited underwriting submissions on a single local multimodal GPU model (<code>qwen2.5vl:7b</code>), and track carrier placements through binding.
         </p>
 
         {/* Primary CTA Buttons */}

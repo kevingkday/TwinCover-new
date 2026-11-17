@@ -6,12 +6,16 @@ from sqlalchemy import text, desc
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.entities import User, Client, Policy, ExtractedFields, LetterTemplate, GeneratedLetter
+from app.models.entities import (
+    User, Client, Policy, ExtractedFields, LetterTemplate, GeneratedLetter,
+    Submission, EvidenceArtifact, MarketPlacement, SubmissionJob
+)
 from app.schemas.schemas import SystemHealthResponse, ServiceStatus
 from app.services.extractor_client import extractor_client
 from app.services.jev_classifier import jev_classifier
 from app.services.ollama_client import ollama_client
 from app.services.rag_service import rag_service
+from app.services.transcription_service import transcription_service
 
 router = APIRouter(prefix="/system", tags=["System Health & Architecture"])
 
@@ -34,10 +38,13 @@ async def get_system_health(db: Session = Depends(get_db)):
     # 3. Extractor Microservice Health
     ext_ok, ext_msg = await extractor_client.check_health()
 
-    # 4. Ollama LLM Health
+    # 4. Ollama Multimodal LLM Health (Consolidated qwen2.5vl:7b)
     ollama_ok, ollama_msg = await ollama_client.check_health()
 
-    # 5. ChromaDB Health
+    # 5. Local faster-whisper Audio Transcription Health
+    whisper_ok, whisper_msg = await transcription_service.check_health()
+
+    # 6. ChromaDB Health
     chroma_ok = False
     chroma_msg = "ChromaDB ready"
     try:
@@ -69,10 +76,16 @@ async def get_system_health(db: Session = Depends(get_db)):
             status_message=ext_msg
         ),
         ollama_llm=ServiceStatus(
-            name=f"Local LLM ({settings.LLM_MODEL})",
+            name=f"Consolidated Multimodal VLM ({settings.LLM_MODEL})",
             url=settings.OLLAMA_BASE_URL,
             is_online=ollama_ok,
             status_message=ollama_msg
+        ),
+        whisper_transcription=ServiceStatus(
+            name=f"Local Voice Transcription (faster-whisper)",
+            url=f"local://{settings.WHISPER_MODEL}",
+            is_online=whisper_ok,
+            status_message=whisper_msg
         ),
         chroma_vector_db=ServiceStatus(
             name="ChromaDB Vector Store (Persistent)",
@@ -180,6 +193,9 @@ def get_admin_overview(
             "total_verified_policies": total_verified,
             "total_letters_generated": total_letters,
             "total_templates": total_templates,
+            "total_submissions": db.query(Submission).count(),
+            "total_evidence_artifacts": db.query(EvidenceArtifact).count(),
+            "total_market_placements": db.query(MarketPlacement).count(),
         },
         "database_stats": {
             "users_table": total_brokers,
@@ -188,6 +204,10 @@ def get_admin_overview(
             "extracted_fields_table": db.query(ExtractedFields).count(),
             "letter_templates_table": total_templates,
             "generated_letters_table": total_letters,
+            "submissions_table": db.query(Submission).count(),
+            "evidence_artifacts_table": db.query(EvidenceArtifact).count(),
+            "market_placements_table": db.query(MarketPlacement).count(),
+            "submission_jobs_table": db.query(SubmissionJob).count(),
             "database_engine": "SQLite / Local DB (twincover.db)"
         },
         "brokers": broker_list,

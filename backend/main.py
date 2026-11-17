@@ -12,6 +12,8 @@ from app.api.policies import router as policies_router
 from app.api.letters import router as letters_router
 from app.api.rag import router as rag_router
 from app.api.system import router as system_router
+from app.api.submissions import router as submissions_router
+from app.api.jobs import router as jobs_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,6 +55,8 @@ app.include_router(policies_router, prefix=settings.API_V1_STR)
 app.include_router(letters_router, prefix=settings.API_V1_STR)
 app.include_router(rag_router, prefix=settings.API_V1_STR)
 app.include_router(system_router, prefix=settings.API_V1_STR)
+app.include_router(submissions_router, prefix=settings.API_V1_STR)
+app.include_router(jobs_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")

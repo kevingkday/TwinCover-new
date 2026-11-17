@@ -278,5 +278,212 @@ class SystemHealthResponse(BaseModel):
     jev_classifier: Optional[ServiceStatus] = None
     extractor_microservice: ServiceStatus
     ollama_llm: ServiceStatus
+    whisper_transcription: Optional[ServiceStatus] = None
     chroma_vector_db: ServiceStatus
     all_operational: bool
+
+
+# ==========================================
+# Phase 1: Pre-Bind Producer Copilot Schemas
+# ==========================================
+
+class SourceCitation(BaseModel):
+    artifact_id: str
+    artifact_type: str  # photo, audio, pdf, spreadsheet, text_note
+    reference: str      # e.g., "site_photo_02.jpg", "00:42 - 00:58", "Page 1"
+    excerpt: str
+
+
+class CitedUnderwritingField(BaseModel):
+    field_key: str
+    label: str
+    value: Optional[str] = None
+    confidence: float = 0.90
+    category: str = "Underwriting Profile"
+    citations: List[SourceCitation] = []
+
+
+class MissingInfoItem(BaseModel):
+    id: str
+    item: str
+    severity: str = "required"  # required, recommended
+    specialty_line: str = "general_commercial"
+    resolved: bool = False
+    reason: Optional[str] = None
+
+
+class EvidenceArtifactResponse(BaseModel):
+    id: int
+    artifact_key: str = ""
+    submission_id: int
+    client_id: int
+    broker_id: int
+    artifact_type: str
+    file_path: str
+    raw_text_or_transcript: Optional[Any] = None
+    captured_at: datetime
+    metadata_json: Optional[Dict[str, Any]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("raw_text_or_transcript", mode="before")
+    @classmethod
+    def parse_raw_transcript(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return {"text": v}
+        return v
+
+    @field_validator("metadata_json", mode="before")
+    @classmethod
+    def parse_metadata_json(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return {}
+        return v or {}
+
+
+class MarketPlacementCreate(BaseModel):
+    carrier_name: str
+    target_line: str
+    status: str = "drafted"
+    quoted_premium: Optional[str] = None
+    quote_summary_json: Optional[Dict[str, Any]] = None
+    notes: Optional[str] = None
+
+
+class MarketPlacementUpdate(BaseModel):
+    carrier_name: Optional[str] = None
+    target_line: Optional[str] = None
+    status: Optional[str] = None
+    quoted_premium: Optional[str] = None
+    quote_summary_json: Optional[Dict[str, Any]] = None
+    notes: Optional[str] = None
+
+
+class MarketPlacementResponse(BaseModel):
+    id: int
+    submission_id: int
+    client_id: int
+    broker_id: int
+    carrier_name: str
+    target_line: str
+    status: str
+    quoted_premium: Optional[str] = None
+    quote_summary_json: Optional[Dict[str, Any]] = None
+    notes: Optional[str] = None
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("quote_summary_json", mode="before")
+    @classmethod
+    def parse_quote_summary(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return {}
+        return v or {}
+
+
+class SubmissionCreate(BaseModel):
+    client_id: int
+    title: str
+    specialty_line: str = "general_commercial"
+    status: str = "field_capture"
+    initial_note: Optional[str] = None
+
+
+class SubmissionUpdate(BaseModel):
+    title: Optional[str] = None
+    specialty_line: Optional[str] = None
+    status: Optional[str] = None
+    structured_risk_profile: Optional[List[CitedUnderwritingField]] = None
+    underwriter_narrative: Optional[str] = None
+    missing_info_checklist: Optional[List[MissingInfoItem]] = None
+    client_followup_draft: Optional[str] = None
+    verified: Optional[bool] = None
+
+
+class SubmissionJobResponse(BaseModel):
+    id: str
+    submission_id: int
+    client_id: int
+    broker_id: int
+    job_type: str
+    status: str
+    progress: int
+    current_step: str
+    receipt: str = "Processing Capture"
+    payload_json: Optional[Dict[str, Any]] = None
+    result_json: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("payload_json", "result_json", mode="before")
+    @classmethod
+    def parse_job_json(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return {}
+        return v
+
+
+class SubmissionResponse(BaseModel):
+    id: int
+    client_id: int
+    broker_id: int
+    client_name: Optional[str] = None
+    title: str
+    specialty_line: str
+    status: str
+    structured_risk_profile: List[CitedUnderwritingField] = []
+    underwriter_narrative: Optional[str] = None
+    missing_info_checklist: List[MissingInfoItem] = []
+    client_followup_draft: Optional[str] = None
+    verified_at: Optional[datetime] = None
+    verified_by: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    artifact_count: int = 0
+    placement_count: int = 0
+    evidence_artifacts: List[EvidenceArtifactResponse] = []
+    market_placements: List[MarketPlacementResponse] = []
+    latest_job: Optional[SubmissionJobResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("structured_risk_profile", mode="before")
+    @classmethod
+    def parse_risk_profile(cls, v):
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                return []
+        return v or []
+
+    @field_validator("missing_info_checklist", mode="before")
+    @classmethod
+    def parse_checklist(cls, v):
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                return []
+        return v or []

@@ -6,13 +6,14 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ClientsList from './pages/ClientsList';
 import ClientWorkspace from './pages/ClientWorkspace';
+import ProducerCopilot from './pages/ProducerCopilot';
 import TemplateEditor from './pages/TemplateEditor';
 import AdminDashboard from './pages/AdminDashboard';
 import { authApi } from './api/authApi';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(authApi.isAuthenticated());
-  const [activePage, setActivePage] = useState('home'); // 'home' | 'clients' | 'workspace' | 'templates' | 'admin' | 'login' | 'register'
+  const [activePage, setActivePage] = useState('home'); // 'home' | 'copilot' | 'clients' | 'workspace' | 'templates' | 'admin' | 'login' | 'register'
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
 
@@ -22,7 +23,7 @@ export default function App() {
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
-    setActivePage('clients');
+    setActivePage('copilot');
   };
 
   const handleOpenClientWorkspace = (clientId) => {
@@ -49,10 +50,14 @@ export default function App() {
         {activePage === 'home' && (
           <LandingPage
             isAuthenticated={isAuthenticated}
-            onLaunchWorkspace={() => setActivePage('clients')}
+            onLaunchWorkspace={() => setActivePage('copilot')}
             onOpenAuth={(mode) => setActivePage(mode === 'register' ? 'register' : 'login')}
             onDemoLoginSuccess={handleLoginSuccess}
           />
+        )}
+
+        {activePage === 'copilot' && isAuthenticated && (
+          <ProducerCopilot initialClientId={selectedClientId} />
         )}
 
         {activePage === 'login' && (

@@ -17,11 +17,18 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     # External AI & Extraction Services (100% Local Sovereign Node)
+    # Consolidated onto single multimodal model (qwen2.5vl:7b) to prevent VRAM model-swapping on 16GB RTX 5080
     EXTRACTOR_URL: str = "http://127.0.0.1:5005/process"
     EXTRACTOR_TOKEN: str = "micronode-secret-key"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    LLM_MODEL: str = "qwen2.5:7b-instruct"
+    LLM_MODEL: str = "qwen2.5vl:7b"
+    VISION_MODEL: str = "qwen2.5vl:7b"
     EMBED_MODEL: str = "nomic-embed-text"
+
+    # Local Audio Transcription (faster-whisper)
+    WHISPER_MODEL: str = "large-v3-turbo"
+    WHISPER_DEVICE: str = "auto"
+    WHISPER_COMPUTE_TYPE: str = "int8"
 
     # Cloudflare Zero Trust Access (Service Token for remote/tunneled Ollama & Extractor)
     CF_ACCESS_CLIENT_ID: Optional[str] = None
@@ -30,6 +37,7 @@ class Settings(BaseSettings):
     # ChromaDB & Upload Storage
     CHROMA_PERSIST_DIRECTORY: str = "./chroma_data"
     UPLOAD_DIR: str = "./uploads"
+    EVIDENCE_VAULT_DIR: str = "./uploads/evidence_vault"
 
     # CORS
     CORS_ORIGINS: List[str] = [
@@ -54,4 +62,5 @@ settings = Settings()
 
 # Ensure directories exist
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+os.makedirs(settings.EVIDENCE_VAULT_DIR, exist_ok=True)
 os.makedirs(settings.CHROMA_PERSIST_DIRECTORY, exist_ok=True)

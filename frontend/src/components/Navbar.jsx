@@ -9,6 +9,7 @@ import {
   Home,
   Zap,
   LogIn,
+  Sparkles,
 } from 'lucide-react';
 import { authApi } from '../api/authApi';
 import { systemApi } from '../api/systemApi';
@@ -138,11 +139,20 @@ export default function Navbar({
 
           <button
             type="button"
+            onClick={() => setActivePage(isAuthenticated ? 'copilot' : 'login')}
+            style={navItemStyle(activePage === 'copilot')}
+          >
+            <Sparkles size={14} color="#2563EB" />
+            <span>Pre-Bind Copilot</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActivePage(isAuthenticated ? 'clients' : 'login')}
             style={navItemStyle(activePage === 'clients' || activePage === 'workspace')}
           >
             <Users size={14} />
-            <span>Clients & Intake</span>
+            <span>Clients & Policies</span>
           </button>
 
           <button

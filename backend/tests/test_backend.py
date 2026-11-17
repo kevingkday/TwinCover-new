@@ -396,6 +396,143 @@ def test_classify_endpoint():
     assert body["is_insurance_document"] > 0.5
 
 
+def test_phase1_vram_consolidation_and_whisper_transcription():
+    from app.core.config import settings
+    from app.services.ollama_client import ollama_client
+    from app.services.transcription_service import transcription_service
+
+    # Verify VRAM consolidation onto qwen2.5vl:7b + nomic-embed-text
+    assert "qwen2.5vl" in settings.LLM_MODEL or "qwen2.5-vl" in settings.LLM_MODEL
+    assert settings.EMBED_MODEL == "nomic-embed-text"
+    assert ollama_client.llm_model == settings.LLM_MODEL
+
+    # Verify local voice memo transcription returns timestamped segments
+    sample_audio = b"Built in 2019, full steel frame, wet sprinklered throughout. Requesting $10,000,000 Wrap-Up limit."
+    res = transcription_service.transcribe_bytes(
+        sample_audio,
+        filename="site_walkthrough.m4a",
+        specialty_line="construction"
+    )
+    assert "segments" in res
+    assert len(res["segments"]) >= 1
+    first_seg = res["segments"][0]
+    assert "start" in first_seg and "end" in first_seg and "text" in first_seg
+    assert "reference" in first_seg and " - " in first_seg["reference"]
+
+
+def test_phase1_submissions_evidence_vault_and_cited_extraction():
+    email = f"producer_{os.urandom(4).hex()}@twincover.com"
+    reg_resp = client.post("/api/auth/register", json={
+        "email": email,
+        "password": "TwinCover2026!",
+        "full_name": "Canadian Specialty Producer",
+        "agency_name": "WestCoast Specialty Risks"
+    })
+    assert reg_resp.status_code == 201
+    token = reg_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Create a commercial client
+    cli_resp = client.post("/api/clients/", json={
+        "name": "BC Timber & Steel Structures Inc.",
+        "account_number": "BCT-2026",
+        "primary_contact": "Liam MacLeod, VP Operations",
+        "email": "liam@bctimber.ca"
+    }, headers=headers)
+    assert cli_resp.status_code == 201
+    client_id = cli_resp.json()["id"]
+
+    # 2. Create a pre-bind Construction submission
+    sub_resp = client.post("/api/submissions/", json={
+        "client_id": client_id,
+        "title": "Burnaby Industrial Logistics Hub — Wrap-Up & Builders Risk",
+        "specialty_line": "construction",
+        "status": "field_capture"
+    }, headers=headers)
+    assert sub_resp.status_code == 201
+    sub_id = sub_resp.json()["id"]
+
+    # 3. Upload multi-artifact capture (site photo + voice memo + field note)
+    photo_bytes = b"\xff\xd8\xff\xe0JFIF-test-sprinkler-riser-photo"
+    audio_bytes = b"Built in 2019, full steel frame, wet sprinklered throughout. Total project value $14,500,000 CAD."
+
+    cap_resp = client.post(
+        f"/api/submissions/{sub_id}/capture",
+        files=[
+            ("files", ("site_photo_02.jpg", photo_bytes, "image/jpeg")),
+            ("files", ("walkthrough_voice.m4a", audio_bytes, "audio/mp4")),
+        ],
+        data={
+            "text_note": "Hot works welding permit enforced with 60-minute thermal fire watch.",
+            "note_title": "field_inspection_note.txt",
+            "run_sync": "true",
+        },
+        headers=headers,
+    )
+    assert cap_resp.status_code == 202
+    job_data = cap_resp.json()
+    assert job_data["receipt"] == "Processing Capture"
+    job_id = job_data["id"]
+
+    # 4. Poll GET /api/jobs/{job_id}
+    poll_resp = client.get(f"/api/jobs/{job_id}", headers=headers)
+    assert poll_resp.status_code == 200
+    assert poll_resp.json()["status"] == "completed"
+    assert poll_resp.json()["progress"] == 100
+
+    # 5. Fetch updated submission and verify Immutable Evidence Vault + Source-Cited Risk Profile
+    detail_resp = client.get(f"/api/submissions/{sub_id}", headers=headers)
+    assert detail_resp.status_code == 200
+    sub_detail = detail_resp.json()
+    assert sub_detail["artifact_count"] == 3
+    assert len(sub_detail["evidence_artifacts"]) == 3
+
+    # Check immutability metadata on stored artifacts
+    for art in sub_detail["evidence_artifacts"]:
+        assert art["metadata_json"]["is_immutable"] is True
+        assert len(art["metadata_json"]["sha256_hash"]) == 64
+        assert os.path.exists(art["file_path"])
+
+    # Check source-cited underwriting fields (Task C schema)
+    risk_profile = sub_detail["structured_risk_profile"]
+    assert len(risk_profile) >= 3
+    for field in risk_profile:
+        assert "field_key" in field
+        assert "label" in field
+        assert "value" in field and field["value"]
+        assert "confidence" in field and 0.0 <= field["confidence"] <= 1.0
+        assert "citations" in field and len(field["citations"]) >= 1
+        first_cit = field["citations"][0]
+        assert first_cit["artifact_id"].startswith("art_")
+        assert first_cit["artifact_type"] in ("photo", "audio", "pdf", "spreadsheet", "text_note")
+        assert first_cit["reference"]
+        assert first_cit["excerpt"]
+
+    # 6. Add & update a Canadian Carrier Market Placement
+    mp_resp = client.post(
+        f"/api/submissions/{sub_id}/placements",
+        json={
+            "carrier_name": "Intact Specialty Solutions",
+            "target_line": "Wrap-Up Liability & Builders Risk",
+            "status": "submitted",
+            "quoted_premium": "$58,400 CAD",
+            "notes": "Lead market for BC steel & timber industrial risks"
+        },
+        headers=headers
+    )
+    assert mp_resp.status_code == 201
+    mp_id = mp_resp.json()["id"]
+
+    mp_upd = client.put(
+        f"/api/submissions/{sub_id}/placements/{mp_id}",
+        json={"status": "quote_received", "quoted_premium": "$56,900 CAD"},
+        headers=headers
+    )
+    assert mp_upd.status_code == 200
+    assert mp_upd.json()["status"] == "quote_received"
+    assert mp_upd.json()["quoted_premium"] == "$56,900 CAD"
+
+
 def teardown_module(module):
     if os.path.exists("./test_twincover.db"):
         try:

@@ -136,6 +136,29 @@ export default function SystemHealthModal({ isOpen, onClose }) {
               </div>
             </div>
 
+            {/* faster-whisper Audio Transcription Card */}
+            {health.whisper_transcription && (
+              <div className="glass-panel" style={{ padding: '14px 18px', background: '#F8FAFC' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Cpu size={18} color="#7C3AED" />
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 600 }}>{health.whisper_transcription.name}</div>
+                      <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        {health.whisper_transcription.url}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`badge ${health.whisper_transcription.is_online ? 'badge-verified' : 'badge-pending'}`}>
+                    {health.whisper_transcription.is_online ? 'Ready' : 'Offline'}
+                  </span>
+                </div>
+                <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {health.whisper_transcription.status_message}
+                </div>
+              </div>
+            )}
+
             {/* ChromaDB Card */}
             <div className="glass-panel" style={{ padding: '14px 18px', background: '#F8FAFC' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
