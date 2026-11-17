@@ -16,7 +16,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
@@ -40,7 +40,9 @@ from app.schemas.schemas import (
     SubmissionResponse,
     SubmissionUpdate,
 )
+from app.services.export_service import export_service
 from app.services.job_queue import job_queue
+from app.services.quote_diff_engine import quote_diff_engine
 
 logger = logging.getLogger(__name__)
 
@@ -616,3 +618,300 @@ def delete_market_placement(
     db.delete(placement)
     db.commit()
     return None
+
+
+# ==============================================================================
+# Phase 2: Outbound Carrier Submission Packet, Cover Email & Quote Diffing
+# ==============================================================================
+
+@router.get("/{submission_id}/export")
+def export_submission_packet(
+    submission_id: int,
+    format: str = Query("pdf", pattern="^(docx|pdf)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generate a Triage-AI & Human Underwriter Submission Packet (.docx or .pdf).
+    Enforces E&O Sign-Off Gate: blocks export (403 Forbidden) unless `submission.verified_at` is set.
+    """
+    sub = (
+        db.query(Submission)
+        .filter(Submission.id == submission_id, Submission.broker_id == current_user.id)
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found.")
+
+    if sub.verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="E&O Sign-Off Gate: Producer verification (verified_at) is required before exporting an outbound Carrier Submission Packet."
+        )
+
+    client_obj = db.query(Client).filter(Client.id == sub.client_id).first()
+    artifacts = (
+        db.query(EvidenceArtifact)
+        .filter(EvidenceArtifact.submission_id == sub.id)
+        .order_by(EvidenceArtifact.id.asc())
+        .all()
+    )
+
+    file_bytes = export_service.export_submission_packet(
+        submission=sub,
+        client_obj=client_obj,
+        broker_user=current_user,
+        artifacts=artifacts,
+        fmt=format,
+    )
+
+    safe_title = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in sub.title)[:50]
+    if format.lower() == "docx":
+        return Response(
+            content=file_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{safe_title}_Submission_Packet.docx"'}
+        )
+    return Response(
+        content=file_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe_title}_Submission_Packet.pdf"'}
+    )
+
+
+@router.post("/{submission_id}/cover-email")
+def generate_underwriter_cover_email(
+    submission_id: int,
+    payload: Optional[Dict[str, Any]] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Draft a carrier-specific submission cover email tailored to a selected row in `market_placements`.
+    """
+    sub = (
+        db.query(Submission)
+        .filter(Submission.id == submission_id, Submission.broker_id == current_user.id)
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found.")
+
+    client_obj = db.query(Client).filter(Client.id == sub.client_id).first()
+    client_name = client_obj.name if client_obj else "Commercial Insured"
+
+    placement_id = (payload or {}).get("placement_id")
+    placement = None
+    if placement_id:
+        placement = (
+            db.query(MarketPlacement)
+            .filter(MarketPlacement.id == placement_id, MarketPlacement.submission_id == sub.id)
+            .first()
+        )
+    carrier_name = placement.carrier_name if placement else ((payload or {}).get("carrier_name") or "Underwriting Team")
+    target_line = placement.target_line if placement else str(sub.specialty_line).replace("_", " ").title()
+
+    risk_profile = []
+    if sub.structured_risk_profile:
+        try:
+            risk_profile = json.loads(sub.structured_risk_profile)
+        except Exception:
+            risk_profile = []
+
+    highlights = "\n".join(
+        [f"• {f.get('label')}: {f.get('value')}" for f in risk_profile[:4]]
+    ) or "• Full verified risk schedule attached in the formal Submission Packet."
+
+    agency = current_user.agency_name or "Ocean Falls Insurance Services"
+    broker = current_user.full_name or "Commercial Producer"
+
+    subject = f"New Commercial Submission: {client_name} — {target_line} ({sub.title})"
+    body = (
+        f"Hello {carrier_name} Underwriting Team,\n\n"
+        f"Please find attached our verified commercial underwriting submission packet for {client_name} "
+        f"seeking {target_line} terms.\n\n"
+        f"Key Verified Risk Highlights:\n"
+        f"{highlights}\n\n"
+        f"All physical site observations, voice walkthrough disclosures, and schedules have been cross-referenced "
+        f"in the attached Submission Packet (with full E&O source provenance).\n\n"
+        f"Please let us know if you require any additional loss control details to release a firm binding quote.\n\n"
+        f"Best regards,\n"
+        f"{broker}\n"
+        f"{agency}\n"
+        f"{current_user.email}"
+    )
+
+    return {
+        "submission_id": sub.id,
+        "placement_id": placement.id if placement else None,
+        "carrier_name": carrier_name,
+        "target_line": target_line,
+        "verified": sub.verified_at is not None,
+        "subject": subject,
+        "body": body,
+    }
+
+
+@router.post(
+    "/{submission_id}/placements/{placement_id}/quote",
+    response_model=SubmissionJobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def upload_carrier_quote_pdf(
+    submission_id: int,
+    placement_id: int,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    run_sync: bool = Form(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Upload a carrier quote PDF for a specific `MarketPlacement`.
+    Archives the quote PDF immutably in `evidence_artifacts` (`artifact_type='quote_pdf'`)
+    and enqueues an async `quote_ingestion` job using `qwen2.5vl:7b`.
+    """
+    sub = (
+        db.query(Submission)
+        .filter(Submission.id == submission_id, Submission.broker_id == current_user.id)
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found.")
+
+    placement = (
+        db.query(MarketPlacement)
+        .filter(
+            MarketPlacement.id == placement_id,
+            MarketPlacement.submission_id == sub.id,
+            MarketPlacement.broker_id == current_user.id,
+        )
+        .first()
+    )
+    if not placement:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Market placement not found.")
+
+    raw_bytes = await file.read()
+    if not raw_bytes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded quote PDF is empty.")
+
+    vault_dir = os.path.join(settings.EVIDENCE_VAULT_DIR, f"sub_{sub.id}")
+    os.makedirs(vault_dir, exist_ok=True)
+    safe_name = os.path.basename(file.filename or "carrier_quote.pdf").replace(" ", "_")
+    immutable_path = os.path.join(vault_dir, f"immutable_{uuid.uuid4().hex[:10]}_{safe_name}")
+    with open(immutable_path, "wb") as f:
+        f.write(raw_bytes)
+
+    sha256_hex = hashlib.sha256(raw_bytes).hexdigest()
+    meta = {
+        "original_filename": file.filename or "carrier_quote.pdf",
+        "content_type": file.content_type or "application/pdf",
+        "file_size": len(raw_bytes),
+        "sha256_hash": sha256_hex,
+        "is_immutable": True,
+        "placement_id": placement.id,
+        "carrier_name": placement.carrier_name,
+    }
+    art = EvidenceArtifact(
+        submission_id=sub.id,
+        client_id=sub.client_id,
+        broker_id=current_user.id,
+        artifact_type="quote_pdf",
+        file_path=immutable_path,
+        metadata_json=json.dumps(meta),
+    )
+    db.add(art)
+    db.commit()
+    db.refresh(art)
+
+    job = job_queue.create_job(
+        db=db,
+        submission_id=sub.id,
+        client_id=sub.client_id,
+        broker_id=current_user.id,
+        job_type="quote_ingestion",
+        artifact_ids=[art.id],
+        extra_payload={"placement_id": placement.id},
+    )
+
+    session_factory = sessionmaker(autocommit=False, autoflush=False, bind=db.get_bind())
+    if run_sync:
+        await job_queue.execute_job(job.id, session_factory=session_factory)
+        db.refresh(job)
+    else:
+        background_tasks.add_task(job_queue.execute_job, job.id, session_factory)
+
+    return job
+
+
+@router.post("/{submission_id}/compare-quotes")
+def compare_submission_quotes(
+    submission_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Automated Quote Diffing Engine (`quote_vs_expiring` & `quote_vs_quote`):
+    Returns structured diff flags (`higher_deductible`, `narrowed_limit`, `new_exclusion`, `subjectivity_required`)
+    with severity (`high`, `medium`, `info`).
+    """
+    sub = (
+        db.query(Submission)
+        .filter(Submission.id == submission_id, Submission.broker_id == current_user.id)
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found.")
+
+    placements = (
+        db.query(MarketPlacement)
+        .filter(MarketPlacement.submission_id == sub.id)
+        .order_by(MarketPlacement.updated_at.desc())
+        .all()
+    )
+    return quote_diff_engine.compare_quotes(sub, placements)
+
+
+@router.get("/{submission_id}/quote-comparison/export")
+def export_quote_comparison_proposal(
+    submission_id: int,
+    format: str = Query("pdf", pattern="^(docx|pdf)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Export a Client Quote Comparison Proposal (.docx or .pdf) for the insured."""
+    sub = (
+        db.query(Submission)
+        .filter(Submission.id == submission_id, Submission.broker_id == current_user.id)
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found.")
+
+    client_obj = db.query(Client).filter(Client.id == sub.client_id).first()
+    placements = (
+        db.query(MarketPlacement)
+        .filter(MarketPlacement.submission_id == sub.id)
+        .order_by(MarketPlacement.updated_at.desc())
+        .all()
+    )
+    comparison = quote_diff_engine.compare_quotes(sub, placements)
+    file_bytes = export_service.export_quote_comparison_proposal(
+        submission=sub,
+        client_obj=client_obj,
+        comparison_result=comparison,
+        fmt=format,
+    )
+
+    safe_title = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in sub.title)[:45]
+    if format.lower() == "docx":
+        return Response(
+            content=file_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{safe_title}_Quote_Comparison.docx"'}
+        )
+    return Response(
+        content=file_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{safe_title}_Quote_Comparison.pdf"'}
+    )

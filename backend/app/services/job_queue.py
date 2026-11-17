@@ -8,8 +8,9 @@ from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import SessionLocal
-from app.models.entities import Submission, EvidenceArtifact, SubmissionJob, Client
+from app.models.entities import Submission, EvidenceArtifact, SubmissionJob, Client, MarketPlacement
 from app.services.multimodal_extractor import multimodal_extractor
+from app.services.quote_diff_engine import quote_diff_engine
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +30,15 @@ class SubmissionJobQueue:
         broker_id: int,
         job_type: str = "capture_ingestion",
         artifact_ids: Optional[List[int]] = None,
+        extra_payload: Optional[Dict[str, Any]] = None,
     ) -> SubmissionJob:
         job_id = f"job_{uuid.uuid4().hex[:12]}"
         payload = {
             "artifact_ids": artifact_ids or [],
             "queued_at": datetime.now(timezone.utc).isoformat()
         }
+        if extra_payload:
+            payload.update(extra_payload)
         job = SubmissionJob(
             id=job_id,
             submission_id=submission_id,
@@ -89,6 +93,71 @@ class SubmissionJobQueue:
             client_obj = db.query(Client).filter(Client.id == submission.client_id).first()
             client_name = client_obj.name if client_obj else "Commercial Client"
             client_contact = (client_obj.primary_contact if client_obj and client_obj.primary_contact else "Management")
+
+            # Branch: Inbound Carrier Quote PDF Ingestion
+            if job.job_type == "quote_ingestion":
+                payload = json.loads(job.payload_json or "{}")
+                placement_id = payload.get("placement_id")
+                art_ids = payload.get("artifact_ids") or []
+                artifact = (
+                    db.query(EvidenceArtifact).filter(EvidenceArtifact.id == art_ids[0]).first()
+                    if art_ids
+                    else None
+                )
+                placement = (
+                    db.query(MarketPlacement).filter(MarketPlacement.id == placement_id).first()
+                    if placement_id
+                    else None
+                )
+                if not artifact or not placement:
+                    job.status = "failed"
+                    job.error_message = "Quote artifact or MarketPlacement not found."
+                    job.current_step = "Failed"
+                    db.commit()
+                    return None
+
+                meta = json.loads(artifact.metadata_json or "{}")
+                orig_name = meta.get("original_filename") or os.path.basename(artifact.file_path)
+                job.current_step = f"Extracting quote terms & silent exclusions from {orig_name} (qwen2.5vl:7b)..."
+                job.progress = 55
+                db.commit()
+
+                with open(artifact.file_path, "rb") as f:
+                    pdf_bytes = f.read()
+
+                quote_summary = await quote_diff_engine.extract_quote_from_pdf(
+                    pdf_bytes=pdf_bytes,
+                    filename=orig_name,
+                    specialty_line=submission.specialty_line,
+                    carrier_hint=placement.carrier_name,
+                )
+                artifact.raw_text_or_transcript = json.dumps(quote_summary)
+
+                placement.status = "quote_received"
+                if quote_summary.get("quoted_premium") and quote_summary["quoted_premium"] != "Pending":
+                    placement.quoted_premium = quote_summary["quoted_premium"]
+                placement.quote_summary_json = json.dumps(quote_summary)
+                if quote_summary.get("notes"):
+                    placement.notes = quote_summary["notes"]
+
+                if submission.status in ("field_capture", "drafted", "submitted", "underwriter_review"):
+                    submission.status = "quote_received"
+
+                result_summary = {
+                    "submission_id": submission.id,
+                    "placement_id": placement.id,
+                    "carrier_name": placement.carrier_name,
+                    "quoted_premium": placement.quoted_premium,
+                    "exclusions_found": len(quote_summary.get("exclusions_and_endorsements") or []),
+                    "subjectivities_found": len(quote_summary.get("binding_subjectivities") or []),
+                }
+                job.status = "completed"
+                job.progress = 100
+                job.current_step = "Completed"
+                job.result_json = json.dumps(result_summary)
+                job.completed_at = datetime.now(timezone.utc)
+                db.commit()
+                return result_summary
 
             artifacts = (
                 db.query(EvidenceArtifact)

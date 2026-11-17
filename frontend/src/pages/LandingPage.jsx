@@ -214,11 +214,15 @@ export default function LandingPage({
         <p style={{
           fontSize: '17px',
           color: '#475569',
-          maxWidth: '760px',
+          maxWidth: '780px',
           lineHeight: 1.6,
           marginBottom: '32px',
         }}>
-          Built for Canadian commercial insurance producers across Construction/Wrap-Up, Cyber/Tech E&O/AI Liability, Marine, and Environmental lines. Capture site photos, voice walkthrough memos (<code>faster-whisper</code>), and schedules into an <strong>Immutable E&O Raw Evidence Vault</strong>, synthesize source-cited underwriting submissions on a single local multimodal GPU model (<code>qwen2.5vl:7b</code>), and track carrier placements through binding.
+          TwinCover pairs a <strong>Pre-Bind "Field-to-Underwriter" Producer Copilot</strong> with{' '}
+          <strong>Post-Bind Policy Verification</strong>—sitting cleanly in front of your brokerage’s existing BMS/AMS
+          (Applied Epic, Policy Works, sigXP, HawkSoft) with <strong>zero accounting or billing bloat</strong>.
+          Capture site photos & voice memos (<code>faster-whisper</code>) offline or on-site, verify source-cited
+          schedules on a single local GPU model (<code>qwen2.5vl:7b</code>), and export Triage-AI Carrier Submission Packets & Quote Diffs.
         </p>
 
         {/* Primary CTA Buttons */}
@@ -286,52 +290,42 @@ export default function LandingPage({
           )}
         </div>
 
-        {/* 4 Trust Pillars Grid (TwinFlow Card Style) */}
+        {/* 3-Step Field-to-Underwriter Loop Showcase (TwinFlow Card Style) */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
           gap: '16px',
           width: '100%',
           maxWidth: '1100px',
           textAlign: 'left',
         }}>
-          <div className="pro-card" style={{ padding: '20px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1D4ED8', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+          <div className="pro-card" style={{ padding: '22px', borderRadius: '16px', borderTop: '3px solid #2563EB' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1D4ED8', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
               <Cpu size={16} />
-              <span>1. Instant Document Triage</span>
+              <span>1. Mobile Field Capture (Offline-Resilient)</span>
             </div>
-            <p style={{ fontSize: '12.5px', color: '#64748B', lineHeight: 1.55 }}>
-              Determines whether an upload is a Policy, Binder, Certificate (COI), Endorsement, or Quote in under 300ms with calibrated probabilities.
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.55 }}>
+              Snap site photos, record timestamped voice walkthroughs (<code>faster-whisper</code>), or paste discovery notes. Persisted locally in IndexedDB first so you never lose field evidence when signal drops.
             </p>
           </div>
 
-          <div className="pro-card" style={{ padding: '20px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#047857', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+          <div className="pro-card" style={{ padding: '22px', borderRadius: '16px', borderTop: '3px solid #047857' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#047857', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
               <Lock size={16} />
-              <span>2. 100% Local Sovereignty</span>
+              <span>2. Source-Cited AI Extraction & E&O Verification</span>
             </div>
-            <p style={{ fontSize: '12.5px', color: '#64748B', lineHeight: 1.55 }}>
-              Zero offsite data exposure. Vision OCR, LLM schedule extraction, and vector embeddings execute entirely on your local node.
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.55 }}>
+              Every extracted underwriting attribute links directly to its raw photo, audio timestamp (<code>00:42 - 00:58</code>), or PDF page in the Immutable Evidence Vault—gated by mandatory producer sign-off.
             </p>
           </div>
 
-          <div className="pro-card" style={{ padding: '20px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#7E22CE', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
-              <CheckCircle2 size={16} />
-              <span>3. Side-by-Side Audit</span>
-            </div>
-            <p style={{ fontSize: '12.5px', color: '#64748B', lineHeight: 1.55 }}>
-              Split-screen verification pairs the raw declarations schedule with editable coverage rows so no limit or deductible goes unchecked.
-            </p>
-          </div>
-
-          <div className="pro-card" style={{ padding: '20px', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#B45309', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+          <div className="pro-card" style={{ padding: '22px', borderRadius: '16px', borderTop: '3px solid #7E22CE' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#7E22CE', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
               <FileText size={16} />
-              <span>4. Official .DOCX & RAG</span>
+              <span>3. Carrier Submission Packets & Quote Diffing</span>
             </div>
-            <p style={{ fontSize: '12.5px', color: '#64748B', lineHeight: 1.55 }}>
-              Merges verified schedules directly into your brokerage’s Word letterhead and indexes policies into client-isolated ChromaDB.
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.55 }}>
+              Export Triage-AI ready <code>.DOCX</code> / <code>.PDF</code> submission packets & cover emails, then upload returned carrier quote PDFs to flag narrowed sub-limits, higher deductibles, and silent AI/water exclusions.
             </p>
           </div>
         </div>
@@ -624,32 +618,24 @@ export default function LandingPage({
           {/* Column 1: Live Today */}
           <div className="pro-card" style={{ padding: '24px', borderTop: '4px solid #059669' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <span className="badge badge-verified">Live & Testable Today (v1.0)</span>
+              <span className="badge badge-verified">Live & Testable Today (Phase 1 & 2)</span>
               <CheckCircle2 size={18} color="#059669" />
             </div>
             <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '12px' }}>
-              Core Intake, Verification & Letterhead Suite
+              Field-to-Underwriter Copilot & Policy Audit
             </h3>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px', color: '#334155' }}>
               <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                 <Check size={16} color="#059669" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Step-1 Local Document Classifier:</strong> Instant probability triage for Policies, Binders, COIs, Endorsements & Quotes.</span>
+                <span><strong>Pre-Bind Field Capture & Source Provenance:</strong> Site photos, <code>faster-whisper</code> voice memos, and IndexedDB offline queue linked to exact E&O citations.</span>
               </li>
               <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                 <Check size={16} color="#059669" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Sovereign Declarations Extraction:</strong> Local MicroNode vision + <code>qwen2.5:7b-instruct</code> schedule extraction.</span>
+                <span><strong>Triage-AI Carrier Packets & Quote Diffing:</strong> Sign-off gated <code>.DOCX/.PDF</code> packets, 1-click cover emails, and automated quote vs. expiring gap flags.</span>
               </li>
               <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                 <Check size={16} color="#059669" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Side-by-Side Broker Audit:</strong> Split-screen schedule verification with dynamic coverage rows.</span>
-              </li>
-              <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <Check size={16} color="#059669" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Official Word (.DOCX) Letterhead Export:</strong> Preserves brokerage logos, tables, and formatting.</span>
-              </li>
-              <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <Check size={16} color="#059669" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Client-Isolated RAG Q&A:</strong> Partitioned <code>client_&#123;id&#125;</code> ChromaDB vector search with clause citations.</span>
+                <span><strong>Step-1 Local Classifier & Policy Verification:</strong> <code>qwen2.5vl:7b</code> schedule extraction, Word letterhead export, and client-isolated ChromaDB RAG.</span>
               </li>
             </ul>
           </div>
@@ -657,24 +643,20 @@ export default function LandingPage({
           {/* Column 2: In Progress */}
           <div className="pro-card" style={{ padding: '24px', borderTop: '4px solid #2563EB' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <span className="badge badge-blue">In Active Development (v1.1)</span>
+              <span className="badge badge-blue">In Active Development</span>
               <Clock size={18} color="#2563EB" />
             </div>
             <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '12px' }}>
-              Type-Specific Schemas & Binder Tracking
+              Binder-to-Policy & Batch Renewal Triage
             </h3>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px', color: '#334155' }}>
               <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                 <Sparkles size={16} color="#2563EB" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Tailored Extraction per Document Type:</strong> Dedicated field forms for Binders (Subjectivities & Expiry) and COIs (Certificate Holder, AI & WOS status).</span>
+                <span><strong>Binder-to-Issued Policy Reconciliation:</strong> Automatically verify that issued carrier policies match bound quote terms and subjectivities.</span>
               </li>
               <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                 <Sparkles size={16} color="#2563EB" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Binder-to-Policy Reconciliation:</strong> Automatically verify that the issued policy matches the bound terms on the temporary binder.</span>
-              </li>
-              <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <Sparkles size={16} color="#2563EB" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Batch Package Intake:</strong> Drop an entire renewal folder (Policy + Invoice + COI + Endorsements) and auto-sort every file.</span>
+                <span><strong>Multi-Document Batch Package Intake:</strong> Drop an entire renewal folder (Policy + Endorsements + COIs) and auto-sort every file.</span>
               </li>
             </ul>
           </div>
@@ -682,24 +664,20 @@ export default function LandingPage({
           {/* Column 3: Next Up */}
           <div className="pro-card" style={{ padding: '24px', borderTop: '4px solid #7E22CE' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <span className="badge badge-purple">Upcoming Roadmap (v1.2+)</span>
+              <span className="badge badge-purple">Upcoming Roadmap</span>
               <Layers size={18} color="#7E22CE" />
             </div>
             <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '12px' }}>
-              Year-over-Year Redlining & BMS Sync
+              Carrier Portal Sidecar & CSIO XML Export
             </h3>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px', color: '#334155' }}>
               <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                 <ArrowRight size={16} color="#7E22CE" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Expiring vs. Renewal Comparison Table:</strong> Automatic side-by-side diff of expiring limits, deductibles, and premium changes.</span>
+                <span><strong>Carrier Portal Sidecar Autofill:</strong> Push verified pre-bind exposure schedules directly into Canadian insurer & MGA web portals.</span>
               </li>
               <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                 <ArrowRight size={16} color="#7E22CE" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>Exclusion & Sublimit Alerting:</strong> Flag newly introduced cyber, PFAS, or communicable disease exclusions automatically.</span>
-              </li>
-              <li style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <ArrowRight size={16} color="#7E22CE" style={{ flexShrink: 0, marginTop: '3px' }} />
-                <span><strong>BMS / Agency Management Push:</strong> One-click verified schedule export to Applied Epic, Vertafore, and HawkSoft.</span>
+                <span><strong>CSIO XML & BMS Sync:</strong> One-click CSIO XML / verified schedule handoff to Applied Epic, Policy Works, sigXP, and HawkSoft.</span>
               </li>
             </ul>
           </div>

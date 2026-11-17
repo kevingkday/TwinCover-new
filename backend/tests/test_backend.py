@@ -533,6 +533,149 @@ def test_phase1_submissions_evidence_vault_and_cited_extraction():
     assert mp_upd.json()["quoted_premium"] == "$56,900 CAD"
 
 
+def test_phase2_signoff_gate_packet_export_and_quote_diffing():
+    email = f"phase2_{os.urandom(4).hex()}@twincover.com"
+    reg_resp = client.post("/api/auth/register", json={
+        "email": email,
+        "password": "TwinCover2026!",
+        "full_name": "Phase 2 Producer",
+        "agency_name": "Ocean Falls Insurance Services"
+    })
+    assert reg_resp.status_code == 201
+    token = reg_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    cli_resp = client.post("/api/clients/", json={
+        "name": "Pacific Marine & AI Systems Ltd.",
+        "account_number": "PMI-9910",
+        "primary_contact": "Sarah Chen, CFO"
+    }, headers=headers)
+    assert cli_resp.status_code == 201
+    client_id = cli_resp.json()["id"]
+
+    sub_resp = client.post("/api/submissions/", json={
+        "client_id": client_id,
+        "title": "Pacific Tech & Warehouse Placement",
+        "specialty_line": "cyber_ai",
+        "status": "drafted",
+        "initial_note": "Expiring policy has $5,000,000 limit and $10,000 deductible with full AI coverage."
+    }, headers=headers)
+    assert sub_resp.status_code == 201
+    sub_id = sub_resp.json()["id"]
+
+    # 1. Sign-off gate: unverified submission MUST block packet export with 403 Forbidden
+    unverified_pdf = client.get(f"/api/submissions/{sub_id}/export?format=pdf", headers=headers)
+    assert unverified_pdf.status_code == 403
+    unverified_docx = client.get(f"/api/submissions/{sub_id}/export?format=docx", headers=headers)
+    assert unverified_docx.status_code == 403
+
+    # 2. Verify submission (sets verified_at) and set structured_risk_profile baseline
+    verify_resp = client.put(f"/api/submissions/{sub_id}", json={
+        "verified": True,
+        "structured_risk_profile": [
+            {
+                "field_key": "requested_cyber_limit",
+                "label": "Requested Limit & Retention",
+                "value": "$5,000,000 Limit | $10,000 Deductible",
+                "confidence": 0.95,
+                "citations": []
+            }
+        ]
+    }, headers=headers)
+    assert verify_resp.status_code == 200
+    assert verify_resp.json()["verified_at"] is not None
+
+    # 3. Verified submission exports .pdf and .docx successfully
+    verified_pdf = client.get(f"/api/submissions/{sub_id}/export?format=pdf", headers=headers)
+    assert verified_pdf.status_code == 200
+    assert verified_pdf.content.startswith(b"%PDF")
+
+    verified_docx = client.get(f"/api/submissions/{sub_id}/export?format=docx", headers=headers)
+    assert verified_docx.status_code == 200
+    assert len(verified_docx.content) > 1000
+
+    # 4. Cover Email generation
+    mp1 = client.post(f"/api/submissions/{sub_id}/placements", json={
+        "carrier_name": "CFC Underwriting (Canada)",
+        "target_line": "Cyber & AI Liability ($5M)",
+        "status": "submitted"
+    }, headers=headers).json()
+
+    mp2 = client.post(f"/api/submissions/{sub_id}/placements", json={
+        "carrier_name": "Beazley Canada",
+        "target_line": "Cyber & Tech E&O ($5M)",
+        "status": "submitted"
+    }, headers=headers).json()
+
+    cover_resp = client.post(
+        f"/api/submissions/{sub_id}/cover-email",
+        json={"placement_id": mp1["id"]},
+        headers=headers
+    )
+    assert cover_resp.status_code == 200
+    assert "CFC Underwriting" in cover_resp.json()["body"]
+    assert cover_resp.json()["verified"] is True
+
+    # 5. Async Quote PDF ingestion on Placement 1 (includes higher deductible + AI Exclusion)
+    quote1_text = (
+        "CARRIER QUOTE: CFC Underwriting\n"
+        "Total Annual Premium: $42,500 CAD\n"
+        "Limit: $5,000,000\n"
+        "Deductible: $50,000\n"
+        "Endorsement: Absolute Artificial Intelligence Exclusion applies.\n"
+        "Subject to: Signed MFA attestation prior to binding."
+    ).encode("utf-8")
+
+    q1_resp = client.post(
+        f"/api/submissions/{sub_id}/placements/{mp1['id']}/quote",
+        files={"file": ("CFC_Quote_2026.pdf", quote1_text, "application/pdf")},
+        data={"run_sync": "true"},
+        headers=headers
+    )
+    assert q1_resp.status_code == 202
+    assert q1_resp.json()["status"] == "completed"
+
+    # Async Quote PDF ingestion on Placement 2 (narrowed limit + water exclusion)
+    quote2_text = (
+        "CARRIER QUOTE: Beazley Canada\n"
+        "Total Annual Premium: $36,000 CAD\n"
+        "Limit: $2,000,000\n"
+        "Deductible: $10,000\n"
+        "Endorsement: Surface Water Exclusion.\n"
+    ).encode("utf-8")
+
+    q2_resp = client.post(
+        f"/api/submissions/{sub_id}/placements/{mp2['id']}/quote",
+        files={"file": ("Beazley_Quote_2026.pdf", quote2_text, "application/pdf")},
+        data={"run_sync": "true"},
+        headers=headers
+    )
+    assert q2_resp.status_code == 202
+    assert q2_resp.json()["status"] == "completed"
+
+    # 6. Run Quote Diff Analysis (quote_vs_expiring & quote_vs_quote)
+    comp_resp = client.post(f"/api/submissions/{sub_id}/compare-quotes", headers=headers)
+    assert comp_resp.status_code == 200
+    comp_data = comp_resp.json()
+    assert comp_data["quotes_compared"] == 2
+    flag_types = {f["flag_type"] for f in comp_data["diff_flags"]}
+    scopes = {f["comparison_scope"] for f in comp_data["diff_flags"]}
+    assert "higher_deductible" in flag_types
+    assert "narrowed_limit" in flag_types
+    assert "new_exclusion" in flag_types
+    assert "quote_vs_expiring" in scopes
+    assert "quote_vs_quote" in scopes
+
+    # 7. Export Client Quote Comparison Proposal (.pdf & .docx)
+    prop_pdf = client.get(f"/api/submissions/{sub_id}/quote-comparison/export?format=pdf", headers=headers)
+    assert prop_pdf.status_code == 200
+    assert prop_pdf.content.startswith(b"%PDF")
+
+    prop_docx = client.get(f"/api/submissions/{sub_id}/quote-comparison/export?format=docx", headers=headers)
+    assert prop_docx.status_code == 200
+    assert len(prop_docx.content) > 1000
+
+
 def teardown_module(module):
     if os.path.exists("./test_twincover.db"):
         try:

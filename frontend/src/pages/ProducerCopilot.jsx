@@ -25,10 +25,15 @@ import {
   X,
   FileSpreadsheet,
   StickyNote,
+  Mail,
+  AlertTriangle,
+  WifiOff,
+  Scale,
 } from 'lucide-react';
 import { submissionsApi } from '../api/submissionsApi';
 import { clientsApi } from '../api/clientsApi';
 import { lettersApi } from '../api/lettersApi';
+import { offlineCaptureQueue } from '../utils/offlineCaptureQueue';
 
 export const SPECIALTY_META = {
   construction: {
@@ -128,10 +133,78 @@ export default function ProducerCopilot({ initialClientId = null }) {
     notes: '',
   });
 
+  // Phase 2: Offline Capture Queue (IndexedDB), Quote Diffing, and Cover Email Modal
+  const [pendingOfflineCaptures, setPendingOfflineCaptures] = useState([]);
+  const [syncingOffline, setSyncingOffline] = useState(false);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+  const [quoteComparison, setQuoteComparison] = useState(null);
+  const [loadingComparison, setLoadingComparison] = useState(false);
+  const [coverEmailModal, setCoverEmailModal] = useState(null);
+  const [copiedCoverEmail, setCopiedCoverEmail] = useState(false);
+  const [uploadingQuotePlacementId, setUploadingQuotePlacementId] = useState(null);
+  const quoteFileInputRef = useRef(null);
+
+  const refreshPendingOffline = async () => {
+    const items = await offlineCaptureQueue.listPendingCaptures();
+    setPendingOfflineCaptures(items);
+  };
+
+  const syncOfflineQueue = async () => {
+    const pending = await offlineCaptureQueue.listPendingCaptures();
+    if (pending.length === 0) return;
+    setSyncingOffline(true);
+    let syncedCount = 0;
+    try {
+      for (const rec of pending) {
+        try {
+          const files = offlineCaptureQueue.reconstructFiles(rec);
+          const job = await submissionsApi.captureEvidence(rec.submissionId, {
+            files,
+            textNote: rec.notes?.textNote || '',
+            noteTitle: rec.notes?.noteTitle || 'producer_site_note.txt',
+          });
+          await offlineCaptureQueue.removeCapture(rec.id);
+          syncedCount += 1;
+          if (selectedSub && Number(rec.submissionId) === Number(selectedSub.id)) {
+            setActiveJob(job);
+          }
+        } catch (err) {
+          console.warn('Offline sync item deferred:', rec.id, err);
+        }
+      }
+      await refreshPendingOffline();
+      if (syncedCount > 0) {
+        setReceiptBanner(
+          `Synced ${syncedCount} offline capture bundle(s) from IndexedDB to Sovereign Vault.`
+        );
+        if (selectedSub) {
+          const refreshed = await submissionsApi.getSubmission(selectedSub.id);
+          setSelectedSub(refreshed);
+        }
+      }
+    } finally {
+      setSyncingOffline(false);
+    }
+  };
+
   useEffect(() => {
     loadInitialData();
+    refreshPendingOffline();
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncOfflineQueue();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, [initialClientId, filterSpecialty]);
 
@@ -296,12 +369,32 @@ export default function ProducerCopilot({ initialClientId = null }) {
       return;
     }
     setUploadingCapture(true);
+
+    // 1. Write capture bundle to IndexedDB FIRST (cross-browser offline resilience)
+    let offlineRecord = null;
+    try {
+      offlineRecord = await offlineCaptureQueue.enqueueCapture({
+        submissionId: selectedSub.id,
+        files: stagedFiles,
+        textNote,
+        noteTitle: noteTitle || 'producer_site_note.txt',
+      });
+      await refreshPendingOffline();
+    } catch (idbErr) {
+      console.warn('IndexedDB enqueue skipped:', idbErr);
+    }
+
+    // 2. Attempt immediate upload; delete from IndexedDB ONLY after HTTP 200/202
     try {
       const job = await submissionsApi.captureEvidence(selectedSub.id, {
         files: stagedFiles,
         textNote,
         noteTitle: noteTitle || 'producer_site_note.txt',
       });
+      if (offlineRecord) {
+        await offlineCaptureQueue.removeCapture(offlineRecord.id);
+        await refreshPendingOffline();
+      }
       setStagedFiles([]);
       setTextNote('');
       setNoteTitle('');
@@ -310,9 +403,93 @@ export default function ProducerCopilot({ initialClientId = null }) {
         `${job.receipt || 'Processing Capture'} — Job ${job.id} running on Local Sovereign Node (qwen2.5vl:7b + faster-whisper)`
       );
     } catch (err) {
-      alert('Capture failed: ' + err.message);
+      // Keep safely in IndexedDB if offline or network interrupted
+      setStagedFiles([]);
+      setTextNote('');
+      setNoteTitle('');
+      await refreshPendingOffline();
+      setReceiptBanner(
+        'Offline / Network Interrupted: Capture safely persisted in local IndexedDB queue. Will auto-sync when online.'
+      );
     } finally {
       setUploadingCapture(false);
+    }
+  };
+
+  const handleExportPacket = async (fmt) => {
+    if (!selectedSub) return;
+    if (!selectedSub.verified_at) {
+      alert(
+        'E&O Sign-Off Gate: Please click "Verify & Sign Off" on this submission before exporting an outbound Carrier Submission Packet.'
+      );
+      return;
+    }
+    try {
+      await submissionsApi.exportSubmissionPacket(selectedSub.id, fmt, selectedSub.title);
+    } catch (err) {
+      alert('Packet export blocked: ' + err.message);
+    }
+  };
+
+  const handleOpenCoverEmail = async (placementId = null, carrierName = null) => {
+    if (!selectedSub) return;
+    try {
+      const res = await submissionsApi.generateCoverEmail(selectedSub.id, placementId, carrierName);
+      setCoverEmailModal(res);
+      setCopiedCoverEmail(false);
+    } catch (err) {
+      alert('Failed to draft cover email: ' + err.message);
+    }
+  };
+
+  const handleCompareQuotes = async () => {
+    if (!selectedSub) return;
+    setLoadingComparison(true);
+    try {
+      const res = await submissionsApi.compareQuotes(selectedSub.id);
+      setQuoteComparison(res);
+    } catch (err) {
+      alert('Quote comparison failed: ' + err.message);
+    } finally {
+      setLoadingComparison(false);
+    }
+  };
+
+  const handleQuotePdfSelected = async (e) => {
+    const file = e.target.files?.[0];
+    const placementId = uploadingQuotePlacementId;
+    e.target.value = '';
+    if (!file || !placementId || !selectedSub) return;
+    try {
+      const job = await submissionsApi.uploadQuotePdf(selectedSub.id, placementId, file);
+      setActiveJob(job);
+      setReceiptBanner(`Processing Carrier Quote PDF (${file.name}) via qwen2.5vl:7b...`);
+    } catch (err) {
+      alert('Quote PDF upload failed: ' + err.message);
+    } finally {
+      setUploadingQuotePlacementId(null);
+    }
+  };
+
+  const handleToggleSubjectivity = async (placement, subjId) => {
+    if (!selectedSub) return;
+    const qsum = { ...(placement.quote_summary_json || {}) };
+    const subjs = (qsum.binding_subjectivities || []).map((s) =>
+      s.id === subjId ? { ...s, resolved: !s.resolved } : s
+    );
+    qsum.binding_subjectivities = subjs;
+    try {
+      await submissionsApi.updateMarketPlacement(selectedSub.id, placement.id, {
+        quote_summary_json: qsum,
+      });
+      const refreshed = await submissionsApi.getSubmission(selectedSub.id);
+      setSelectedSub(refreshed);
+      if (quoteComparison) {
+        const comp = await submissionsApi.compareQuotes(selectedSub.id);
+        setQuoteComparison(comp);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -532,6 +709,53 @@ export default function ProducerCopilot({ initialClientId = null }) {
         </div>
       </div>
 
+      {/* Hidden input for uploading carrier Quote PDFs onto a MarketPlacement row */}
+      <input
+        type="file"
+        ref={quoteFileInputRef}
+        accept=".pdf,application/pdf"
+        onChange={handleQuotePdfSelected}
+        style={{ display: 'none' }}
+      />
+
+      {/* Offline / Pending IndexedDB Captures Banner */}
+      {(pendingOfflineCaptures.length > 0 || !isOnline) && (
+        <div
+          className="glass-panel"
+          style={{
+            padding: '12px 18px',
+            marginBottom: '16px',
+            background: '#FFFBEB',
+            borderColor: '#FDE68A',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <WifiOff size={16} color="#B45309" />
+            <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#92400E' }}>
+              {pendingOfflineCaptures.length > 0
+                ? `${pendingOfflineCaptures.length} Pending Capture${pendingOfflineCaptures.length > 1 ? 's' : ''} Saved Locally (IndexedDB)`
+                : 'Offline Mode Active — Captures will be persisted locally in IndexedDB'}
+            </span>
+          </div>
+          {pendingOfflineCaptures.length > 0 && (
+            <button
+              type="button"
+              onClick={syncOfflineQueue}
+              disabled={syncingOffline || !isOnline}
+              className="btn btn-primary btn-sm"
+            >
+              <RefreshCw size={13} className={syncingOffline ? 'animate-spin' : ''} />
+              <span>{syncingOffline ? 'Syncing...' : 'Sync Now'}</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Instant "Processing Capture" Async Job Receipt & Progress Bar */}
       {(receiptBanner || (activeJob && activeJob.status !== 'completed')) && (
         <div
@@ -747,7 +971,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
                   </h2>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={handleReSynthesize}
@@ -755,7 +979,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
                     title="Re-run Qwen2.5-VL + faster-whisper multimodal synthesis across all artifacts"
                   >
                     <Sparkles size={14} color="#2563EB" />
-                    <span>Re-Synthesize Evidence</span>
+                    <span>Re-Synthesize</span>
                   </button>
                   <button
                     type="button"
@@ -765,6 +989,51 @@ export default function ProducerCopilot({ initialClientId = null }) {
                   >
                     <CheckCircle2 size={14} />
                     <span>{savingSub ? 'Saving...' : 'Verify & Sign Off'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExportPacket('docx')}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      opacity: selectedSub.verified_at ? 1 : 0.65,
+                      borderColor: selectedSub.verified_at ? '#93C5FD' : '#CBD5E1',
+                      color: selectedSub.verified_at ? '#1D4ED8' : '#64748B',
+                    }}
+                    title={
+                      selectedSub.verified_at
+                        ? 'Download Triage-AI & Underwriter Carrier Packet (.docx)'
+                        : 'Requires Producer Verify & Sign Off first (E&O Sign-Off Gate)'
+                    }
+                  >
+                    <Download size={13} />
+                    <span>Packet .DOCX</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExportPacket('pdf')}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      opacity: selectedSub.verified_at ? 1 : 0.65,
+                      borderColor: selectedSub.verified_at ? '#93C5FD' : '#CBD5E1',
+                      color: selectedSub.verified_at ? '#1D4ED8' : '#64748B',
+                    }}
+                    title={
+                      selectedSub.verified_at
+                        ? 'Download Triage-AI & Underwriter Carrier Packet (.pdf)'
+                        : 'Requires Producer Verify & Sign Off first (E&O Sign-Off Gate)'
+                    }
+                  >
+                    <Download size={13} />
+                    <span>Packet .PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCoverEmail(null, null)}
+                    className="btn btn-secondary btn-sm"
+                    title="Draft 1-Click Underwriter Cover Email"
+                  >
+                    <Mail size={13} color="#2563EB" />
+                    <span>Cover Email</span>
                   </button>
                 </div>
               </div>
@@ -1752,19 +2021,307 @@ export default function ProducerCopilot({ initialClientId = null }) {
                             )}
                           </td>
                           <td style={{ textAlign: 'right' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePlacement(mp.id)}
-                              className="btn btn-ghost btn-sm"
-                              style={{ color: '#DC2626' }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUploadingQuotePlacementId(mp.id);
+                                  quoteFileInputRef.current?.click();
+                                }}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '4px 9px', fontSize: '11.5px' }}
+                                title="Upload Carrier Quote PDF for qwen2.5vl:7b extraction & diffing"
+                              >
+                                <Upload size={12} color="#2563EB" />
+                                <span>Quote PDF</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCoverEmail(mp.id, mp.carrier_name)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '4px 9px', fontSize: '11.5px' }}
+                                title="Draft carrier-specific submission cover email"
+                              >
+                                <Mail size={12} color="#2563EB" />
+                                <span>Cover Email</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePlacement(mp.id)}
+                                className="btn btn-ghost btn-sm"
+                                style={{ color: '#DC2626' }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Quote Comparison & Bind Readiness Section */}
+                <div className="glass-panel" style={{ padding: '20px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '16px',
+                      paddingBottom: '12px',
+                      borderBottom: '1px solid #E2E8F0',
+                      flexWrap: 'wrap',
+                      gap: '10px',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Scale size={18} color="#2563EB" />
+                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A' }}>
+                          Quote Comparison & Bind Readiness Engine
+                        </h3>
+                      </div>
+                      <p style={{ fontSize: '12.5px', color: '#475569', marginTop: '2px' }}>
+                        Compare carrier quotes against expiring/requested limits and across each other to catch silent AI/water exclusions, higher deductibles, and binding subjectivities.
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={handleCompareQuotes}
+                        disabled={loadingComparison}
+                        className="btn btn-primary btn-sm"
+                      >
+                        <Scale size={14} />
+                        <span>{loadingComparison ? 'Comparing...' : 'Run Quote Diff Analysis'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          submissionsApi.exportQuoteComparison(
+                            selectedSub.id,
+                            'docx',
+                            selectedSub.title
+                          )
+                        }
+                        className="btn btn-secondary btn-sm"
+                      >
+                        <Download size={13} /> Proposal .DOCX
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          submissionsApi.exportQuoteComparison(
+                            selectedSub.id,
+                            'pdf',
+                            selectedSub.title
+                          )
+                        }
+                        className="btn btn-secondary btn-sm"
+                      >
+                        <Download size={13} /> Proposal .PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  {quoteComparison ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {/* Baseline & Alert Summary */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
+                          background: '#F8FAFC',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          fontSize: '12.5px',
+                          flexWrap: 'wrap',
+                          gap: '10px',
+                        }}
+                      >
+                        <div>
+                          <strong>Expiring / Requested Baseline:</strong>{' '}
+                          <span style={{ fontFamily: 'var(--font-mono)', color: '#1D4ED8' }}>
+                            {quoteComparison.expiring_baseline?.requested_limit} Limit •{' '}
+                            {quoteComparison.expiring_baseline?.baseline_deductible} Deductible
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <span
+                            style={{
+                              padding: '2px 9px',
+                              borderRadius: '999px',
+                              background: '#FEF2F2',
+                              color: '#B91C1C',
+                              border: '1px solid #FECACA',
+                              fontWeight: 700,
+                              fontSize: '11.5px',
+                            }}
+                          >
+                            {quoteComparison.high_severity_count} High Risk Diffs
+                          </span>
+                          <span
+                            style={{
+                              padding: '2px 9px',
+                              borderRadius: '999px',
+                              background: '#FFFBEB',
+                              color: '#B45309',
+                              border: '1px solid #FDE68A',
+                              fontWeight: 700,
+                              fontSize: '11.5px',
+                            }}
+                          >
+                            {quoteComparison.medium_severity_count} Medium Alerts
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Color-Coded Diff Flags */}
+                      {quoteComparison.diff_flags?.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {quoteComparison.diff_flags.map((df, idx) => {
+                            const isHigh = df.severity === 'high';
+                            const isMed = df.severity === 'medium';
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  padding: '10px 14px',
+                                  borderRadius: '8px',
+                                  background: isHigh ? '#FEF2F2' : isMed ? '#FFFBEB' : '#EFF6FF',
+                                  border: `1px solid ${
+                                    isHigh ? '#FECACA' : isMed ? '#FDE68A' : '#BFDBFE'
+                                  }`,
+                                  display: 'flex',
+                                  alignItems: 'flex-start',
+                                  gap: '10px',
+                                }}
+                              >
+                                <AlertTriangle
+                                  size={16}
+                                  color={isHigh ? '#DC2626' : isMed ? '#D97706' : '#2563EB'}
+                                  style={{ flexShrink: 0, marginTop: '2px' }}
+                                />
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span
+                                      style={{
+                                        fontSize: '13px',
+                                        fontWeight: 700,
+                                        color: isHigh ? '#991B1B' : isMed ? '#92400E' : '#1E3A8A',
+                                      }}
+                                    >
+                                      {df.title}
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: '10px',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        padding: '1px 6px',
+                                        borderRadius: '999px',
+                                        background: '#FFFFFF',
+                                        color: isHigh ? '#DC2626' : isMed ? '#B45309' : '#1D4ED8',
+                                      }}
+                                    >
+                                      {df.flag_type.replace('_', ' ')} • {df.comparison_scope.replace(/_/g, ' ')}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: '12.5px', color: '#334155', marginTop: '2px' }}>
+                                    {df.detail}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Side-by-Side Carrier Cards + Clickable Binding Subjectivities */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                          gap: '14px',
+                        }}
+                      >
+                        {(quoteComparison.matrix || []).map((row) => {
+                          const placementObj = (selectedSub.market_placements || []).find(
+                            (p) => p.id === row.placement_id
+                          );
+                          return (
+                            <div
+                              key={row.placement_id}
+                              style={{
+                                padding: '14px',
+                                borderRadius: '10px',
+                                background: '#F8FAFC',
+                                border: '1px solid #E2E8F0',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A' }}>
+                                  {row.carrier_name}
+                                </span>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: '#047857' }}>
+                                  {row.quoted_premium}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#475569' }}>
+                                <strong>Limit:</strong> {row.limit_summary} | <strong>Deductible:</strong>{' '}
+                                {row.deductible_summary}
+                              </div>
+
+                              {/* Clickable Binding Subjectivities Checklist */}
+                              {(row.binding_subjectivities || []).length > 0 && (
+                                <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid #E2E8F0' }}>
+                                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                    Binding Subjectivities Checklist
+                                  </div>
+                                  {row.binding_subjectivities.map((s) => (
+                                    <label
+                                      key={s.id}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '7px',
+                                        fontSize: '12px',
+                                        color: s.resolved ? '#047857' : '#334155',
+                                        textDecoration: s.resolved ? 'line-through' : 'none',
+                                        marginBottom: '4px',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={!!s.resolved}
+                                        onChange={() =>
+                                          placementObj && handleToggleSubjectivity(placementObj, s.id)
+                                        }
+                                        style={{ marginTop: '2px' }}
+                                      />
+                                      <span>{s.item}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#64748B', fontSize: '13px' }}>
+                      Upload a carrier Quote PDF on any market row above or click <strong>Run Quote Diff Analysis</strong> to inspect coverage gaps, higher deductibles, and silent exclusions.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1866,6 +2423,118 @@ export default function ProducerCopilot({ initialClientId = null }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: 1-Click Underwriter Cover Email Generator */}
+      {coverEmailModal && (
+        <div className="modal-overlay" onClick={() => setCoverEmailModal(null)}>
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '680px' }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '14px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Mail size={20} color="#2563EB" />
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
+                  Underwriter Submission Cover Email — {coverEmailModal.carrier_name}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCoverEmailModal(null)}
+                className="btn btn-ghost btn-sm"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {!coverEmailModal.verified && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: '#FFFBEB',
+                  border: '1px solid #FDE68A',
+                  color: '#92400E',
+                  fontSize: '12.5px',
+                  marginBottom: '12px',
+                }}
+              >
+                <strong>E&O Sign-Off Notice:</strong> Click <em>Verify & Sign Off</em> on the submission header to unlock formal <code>.DOCX</code> / <code>.PDF</code> Carrier Packet attachment downloads.
+              </div>
+            )}
+
+            <div className="form-group">
+              <label className="form-label">Email Subject</label>
+              <input
+                type="text"
+                value={coverEmailModal.subject}
+                onChange={(e) =>
+                  setCoverEmailModal({ ...coverEmailModal, subject: e.target.value })
+                }
+                className="form-input"
+                style={{ fontWeight: 600 }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Email Body</label>
+              <textarea
+                rows={12}
+                value={coverEmailModal.body}
+                onChange={(e) =>
+                  setCoverEmailModal({ ...coverEmailModal, body: e.target.value })
+                }
+                className="form-textarea"
+                style={{ fontFamily: 'var(--font-mono)', fontSize: '12.5px', lineHeight: 1.5 }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleExportPacket('docx')}
+                  className="btn btn-secondary btn-sm"
+                >
+                  <Download size={13} /> Packet .DOCX
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportPacket('pdf')}
+                  className="btn btn-secondary btn-sm"
+                >
+                  <Download size={13} /> Packet .PDF
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      `Subject: ${coverEmailModal.subject}\n\n${coverEmailModal.body}`
+                    );
+                    setCopiedCoverEmail(true);
+                    setTimeout(() => setCopiedCoverEmail(false), 2000);
+                  }}
+                  className="btn btn-primary btn-sm"
+                >
+                  {copiedCoverEmail ? <Check size={14} /> : <Copy size={14} />}
+                  <span>{copiedCoverEmail ? 'Copied to Clipboard!' : 'Copy Subject & Body'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
