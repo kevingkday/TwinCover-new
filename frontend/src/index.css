@@ -425,3 +425,57 @@ a:hover {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Mobile-First Responsive Grids for Field Walk-In & Producer Copilot */
+.copilot-main-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.copilot-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.copilot-two-col-wide {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.copilot-stepper {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.copilot-placement-form {
+  display: grid;
+  grid-template-columns: 1.3fr 1.2fr 0.8fr 0.8fr 1.2fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+@media (max-width: 960px) {
+  .copilot-main-grid,
+  .copilot-two-col,
+  .copilot-two-col-wide,
+  .copilot-placement-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .copilot-stepper {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .copilot-container {
+    padding: 14px 12px !important;
+  }
+}

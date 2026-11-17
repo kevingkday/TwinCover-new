@@ -676,6 +676,33 @@ def test_phase2_signoff_gate_packet_export_and_quote_diffing():
     assert len(prop_docx.content) > 1000
 
 
+def test_mobile_quick_walkin_commercial_pc_cope_checklist():
+    email = f"walkin_{os.urandom(4).hex()}@twincover.com"
+    reg_resp = client.post("/api/auth/register", json={
+        "email": email,
+        "password": "TwinCover2026!",
+        "full_name": "Mobile Producer",
+        "agency_name": "Ocean Falls Insurance Services"
+    })
+    assert reg_resp.status_code == 201
+    headers = {"Authorization": f"Bearer {reg_resp.json()['access_token']}"}
+
+    walkin_resp = client.post("/api/submissions/quick-walkin", json={
+        "business_name": "Pazyryk Rugs",
+        "website_url": "https://pazyrykrug.ca/",
+        "contact_name": "Showroom Owner",
+        "specialty_line": "general_commercial",
+        "initial_note": "Brick retail rug showroom, ~3,500 sq ft, central station burglar and fire alarm, $850,000 stock, zero claims in 5 years."
+    }, headers=headers)
+    assert walkin_resp.status_code == 201
+    data = walkin_resp.json()
+    assert data["client_name"] == "Pazyryk Rugs"
+    assert data["specialty_line"] == "general_commercial"
+    assert data["status"] == "field_capture"
+    assert len(data["missing_info_checklist"]) == 7
+    assert data["artifact_count"] == 1
+
+
 def teardown_module(module):
     if os.path.exists("./test_twincover.db"):
         try:

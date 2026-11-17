@@ -243,6 +243,125 @@ async def create_submission(
     return serialize_submission(sub, db)
 
 
+@router.post("/quick-walkin", response_model=SubmissionResponse, status_code=status.HTTP_201_CREATED)
+async def quick_walkin_capture(
+    payload: Dict[str, Any],
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    1-Tap Mobile Quick Walk-In Endpoint:
+    Creates (or reuses) a Commercial Client account + Pre-Bind Submission in a single call
+    so a producer walking into a prospect (e.g. Pazyryk Rugs) on their phone can start
+    snapping photos and recording voice memos immediately without tab-hopping.
+    """
+    business_name = str(payload.get("business_name") or "").strip()
+    if not business_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Business name is required."
+        )
+
+    website_url = str(payload.get("website_url") or "").strip()
+    contact_name = str(payload.get("contact_name") or "").strip() or None
+    spec_line = str(payload.get("specialty_line") or "general_commercial").strip()
+    if spec_line not in VALID_SPECIALTIES:
+        spec_line = "general_commercial"
+    initial_note = str(payload.get("initial_note") or "").strip()
+
+    # Reuse existing client if exact name exists for this broker, otherwise auto-create
+    client_obj = (
+        db.query(Client)
+        .filter(Client.user_id == current_user.id, Client.name.ilike(business_name))
+        .first()
+    )
+    if not client_obj:
+        acct_prefix = "".join(c for c in business_name.upper() if c.isalnum())[:3] or "COM"
+        acct_num = f"{acct_prefix}-{uuid.uuid4().hex[:5].upper()}"
+        notes_text = "Mobile Quick Walk-In capture."
+        if website_url:
+            notes_text += f" Website: {website_url}"
+        client_obj = Client(
+            user_id=current_user.id,
+            name=business_name,
+            account_number=acct_num,
+            primary_contact=contact_name,
+            notes=notes_text,
+            status="active",
+        )
+        db.add(client_obj)
+        db.commit()
+        db.refresh(client_obj)
+
+    sub_title = str(payload.get("title") or f"{business_name} — Commercial P&C Walk-In Quote").strip()
+    sub = Submission(
+        client_id=client_obj.id,
+        broker_id=current_user.id,
+        title=sub_title,
+        specialty_line=spec_line,
+        status="field_capture",
+        structured_risk_profile="[]",
+        missing_info_checklist="[]",
+    )
+    db.add(sub)
+    db.commit()
+    db.refresh(sub)
+
+    # Pre-populate the specialty-line checklist right away so the phone screen shows all 7 COPE items immediately
+    from app.services.multimodal_extractor import SPECIALTY_LINE_TEMPLATES
+    spec_tmpl = SPECIALTY_LINE_TEMPLATES.get(spec_line, SPECIALTY_LINE_TEMPLATES["general_commercial"])
+    initial_checklist = [
+        {
+            "id": item["id"],
+            "item": item["item"],
+            "severity": item["severity"],
+            "specialty_line": spec_line,
+            "resolved": False,
+            "reason": item["reason"],
+        }
+        for item in spec_tmpl["checklist"]
+    ]
+    sub.missing_info_checklist = json.dumps(initial_checklist)
+    db.commit()
+    db.refresh(sub)
+
+    combined_note = "\n".join(
+        part for part in [
+            f"Prospect Website: {website_url}" if website_url else "",
+            f"Primary Contact: {contact_name}" if contact_name else "",
+            initial_note,
+        ] if part
+    ).strip()
+
+    if combined_note:
+        vault_dir = os.path.join(settings.EVIDENCE_VAULT_DIR, f"sub_{sub.id}")
+        os.makedirs(vault_dir, exist_ok=True)
+        note_bytes = combined_note.encode("utf-8")
+        immutable_path = os.path.join(vault_dir, f"immutable_{uuid.uuid4().hex[:8]}_walkin_context.txt")
+        with open(immutable_path, "wb") as f:
+            f.write(note_bytes)
+        meta = {
+            "original_filename": "walkin_context.txt",
+            "file_size": len(note_bytes),
+            "sha256_hash": hashlib.sha256(note_bytes).hexdigest(),
+            "is_immutable": True,
+            "raw_note_text": combined_note,
+        }
+        art = EvidenceArtifact(
+            submission_id=sub.id,
+            client_id=client_obj.id,
+            broker_id=current_user.id,
+            artifact_type="text_note",
+            file_path=immutable_path,
+            metadata_json=json.dumps(meta),
+        )
+        db.add(art)
+        db.commit()
+
+    return serialize_submission(sub, db)
+
+
 @router.get("/{submission_id}", response_model=SubmissionResponse)
 def get_submission(
     submission_id: int,

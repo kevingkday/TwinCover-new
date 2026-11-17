@@ -146,6 +146,18 @@ export default function ProducerCopilot({ initialClientId = null }) {
   const [uploadingQuotePlacementId, setUploadingQuotePlacementId] = useState(null);
   const quoteFileInputRef = useRef(null);
 
+  // Phase 2.5: Mobile 1-Tap Quick Walk-In Mode (e.g. Pazyryk Rugs Commercial P&C)
+  const [showWalkInModal, setShowWalkInModal] = useState(false);
+  const [submittingWalkIn, setSubmittingWalkIn] = useState(false);
+  const [walkInForm, setWalkInForm] = useState({
+    business_name: '',
+    website_url: '',
+    contact_name: '',
+    specialty_line: 'general_commercial',
+    initial_note: '',
+  });
+  const cameraInputRef = useRef(null);
+
   const refreshPendingOffline = async () => {
     const items = await offlineCaptureQueue.listPendingCaptures();
     setPendingOfflineCaptures(items);
@@ -358,6 +370,32 @@ export default function ProducerCopilot({ initialClientId = null }) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (timerRef.current) clearInterval(timerRef.current);
+    }
+  };
+
+  const handleQuickWalkIn = async (e) => {
+    e.preventDefault();
+    if (!walkInForm.business_name.trim()) return;
+    setSubmittingWalkIn(true);
+    try {
+      const created = await submissionsApi.quickWalkIn(walkInForm);
+      setShowWalkInModal(false);
+      setWalkInForm({
+        business_name: '',
+        website_url: '',
+        contact_name: '',
+        specialty_line: 'general_commercial',
+        initial_note: '',
+      });
+      setSubmissions((prev) => [created, ...prev]);
+      setSelectedSub(created);
+      setActiveTab('capture');
+      // Refresh client list so the new client appears in dropdowns too
+      clientsApi.listClients().then(setClients).catch(() => {});
+    } catch (err) {
+      alert('Quick Walk-In failed: ' + err.message);
+    } finally {
+      setSubmittingWalkIn(false);
     }
   };
 
@@ -628,7 +666,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
     SPECIALTY_META[selectedSub?.specialty_line] || SPECIALTY_META.general_commercial;
 
   return (
-    <div style={{ maxWidth: '1440px', margin: '0 auto', width: '100%', padding: '24px 28px' }}>
+    <div className="copilot-container" style={{ maxWidth: '1440px', margin: '0 auto', width: '100%', padding: '24px 28px' }}>
       {/* Top Executive Header */}
       <div
         style={{
@@ -682,7 +720,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <select
             value={filterSpecialty}
             onChange={(e) => setFilterSpecialty(e.target.value)}
@@ -690,12 +728,26 @@ export default function ProducerCopilot({ initialClientId = null }) {
             style={{ width: 'auto', fontSize: '13px', padding: '8px 12px' }}
           >
             <option value="">All Specialty Lines</option>
+            <option value="general_commercial">Commercial P&C (COPE)</option>
             <option value="construction">Construction & Wrap-Up</option>
             <option value="cyber_ai">Cyber, Tech E&O & AI Liability</option>
             <option value="marine">Commercial Marine</option>
             <option value="environmental">Environmental / Pollution</option>
-            <option value="general_commercial">General Commercial P&C</option>
           </select>
+
+          <button
+            type="button"
+            onClick={() => setShowWalkInModal(true)}
+            className="btn btn-primary"
+            style={{
+              padding: '9px 16px',
+              background: '#0F172A',
+              borderColor: '#0F172A',
+            }}
+          >
+            <Camera size={16} />
+            <span>Quick Walk-In (Phone)</span>
+          </button>
 
           <button
             type="button"
@@ -814,7 +866,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
       )}
 
       {/* Main Layout: Left Submission Selector + Right Active Submission Workspace */}
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', alignItems: 'start' }}>
+      <div className="copilot-main-grid">
         {/* Left Column: Active Pre-Bind Deals List */}
         <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div
@@ -1040,10 +1092,8 @@ export default function ProducerCopilot({ initialClientId = null }) {
 
               {/* 7-Stage Pre-Bind Deal Progression Stepper */}
               <div
+                className="copilot-stepper"
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(7, 1fr)',
-                  gap: '6px',
                   background: '#F8FAFC',
                   padding: '6px',
                   borderRadius: '10px',
@@ -1144,7 +1194,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
 
             {/* TAB 1: SOURCE-CITED RISK PROFILE & PROVENANCE INSPECTOR */}
             {activeTab === 'cited_profile' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: '18px', alignItems: 'start' }}>
+              <div className="copilot-two-col-wide">
                 {/* Left: Source-Cited Underwriting Fields */}
                 <div className="glass-panel" style={{ padding: '20px' }}>
                   <div
@@ -1417,15 +1467,130 @@ export default function ProducerCopilot({ initialClientId = null }) {
 
             {/* TAB 2: FIELD CAPTURE & IMMUTABLE EVIDENCE VAULT */}
             {activeTab === 'capture' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '18px', alignItems: 'start' }}>
-                {/* Left: Multi-Modal Field Capture Form */}
+              <div className="copilot-two-col">
+                {/* Left: Mobile-First Field Capture Form + Live COPE Checklist */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Live "Never Miss Anything" COPE & Security Field Checklist */}
+                  {editableChecklist.length > 0 && (
+                    <div className="glass-panel" style={{ padding: '16px 18px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>
+                          On-Site Field Checklist ({editableChecklist.filter((c) => c.resolved).length}/{editableChecklist.length} Captured)
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            background: editableChecklist.every((c) => c.resolved) ? '#ECFDF5' : '#FFFBEB',
+                            color: editableChecklist.every((c) => c.resolved) ? '#047857' : '#B45309',
+                            border: `1px solid ${editableChecklist.every((c) => c.resolved) ? '#A7F3D0' : '#FDE68A'}`,
+                          }}
+                        >
+                          {editableChecklist.every((c) => c.resolved) ? 'All COPE Items Covered' : 'Ask Before Leaving'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {editableChecklist.map((chk) => (
+                          <div
+                            key={chk.id}
+                            onClick={() => handleToggleChecklistItem(chk.id)}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              background: chk.resolved ? '#ECFDF5' : '#FFFBEB',
+                              border: `1px solid ${chk.resolved ? '#A7F3D0' : '#FDE68A'}`,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '8px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={!!chk.resolved}
+                              onChange={() => {}}
+                              style={{ marginTop: '2px', cursor: 'pointer' }}
+                            />
+                            <span
+                              style={{
+                                fontWeight: 600,
+                                color: chk.resolved ? '#065F46' : '#92400E',
+                                textDecoration: chk.resolved ? 'line-through' : 'none',
+                              }}
+                            >
+                              {chk.item}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                 <div className="glass-panel" style={{ padding: '20px' }}>
                   <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
                     Add Field Evidence to Vault
                   </h3>
-                  <p style={{ fontSize: '12.5px', color: '#475569', marginBottom: '16px' }}>
-                    Drop site photos, voice walkthrough memos (`.webm`, `.m4a`, `.mp3`, `.wav`), SOV spreadsheets, or expiring PDFs. Files are locked immutably with SHA-256 hashing.
+                  <p style={{ fontSize: '12.5px', color: '#475569', marginBottom: '14px' }}>
+                    Snap site photos, record voice walkthrough memos, or attach PDFs. Saved locally in IndexedDB first so you never lose captures if signal drops.
                   </p>
+
+                  {/* Hidden Mobile Rear Camera Input */}
+                  <input
+                    type="file"
+                    ref={cameraInputRef}
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    onChange={(e) => {
+                      const chosen = Array.from(e.target.files || []);
+                      if (chosen.length > 0) {
+                        setStagedFiles((prev) => [...prev, ...chosen]);
+                      }
+                      e.target.value = '';
+                    }}
+                    style={{ display: 'none' }}
+                  />
+
+                  {/* Big Thumb-Friendly Mobile Capture Buttons */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="btn btn-primary"
+                      style={{
+                        padding: '14px 12px',
+                        fontSize: '13.5px',
+                        fontWeight: 700,
+                        justifyContent: 'center',
+                        borderRadius: '10px',
+                      }}
+                    >
+                      <Camera size={18} />
+                      <span>Take Site Photo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
+                      className="btn"
+                      style={{
+                        padding: '14px 12px',
+                        fontSize: '13.5px',
+                        fontWeight: 700,
+                        justifyContent: 'center',
+                        borderRadius: '10px',
+                        background: isRecording ? '#DC2626' : '#7C3AED',
+                        color: '#FFFFFF',
+                        border: 'none',
+                      }}
+                    >
+                      {isRecording ? <Square size={18} /> : <Mic size={18} />}
+                      <span>{isRecording ? `Stop (${recordingSeconds}s)` : 'Voice Memo'}</span>
+                    </button>
+                  </div>
 
                   <form onSubmit={handleCaptureSubmit}>
                     {/* Dropzone + Voice Recorder */}
@@ -1434,7 +1599,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
                       style={{
                         border: '2px dashed #93C5FD',
                         borderRadius: '12px',
-                        padding: '22px 16px',
+                        padding: '16px',
                         textAlign: 'center',
                         background: '#F8FAFC',
                         cursor: 'pointer',
@@ -1566,7 +1731,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
                       type="submit"
                       disabled={uploadingCapture}
                       className="btn btn-primary"
-                      style={{ width: '100%', padding: '10px', fontWeight: 700 }}
+                      style={{ width: '100%', padding: '12px', fontWeight: 700, fontSize: '14px' }}
                     >
                       <Upload size={16} />
                       <span>
@@ -1576,6 +1741,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
                       </span>
                     </button>
                   </form>
+                </div>
                 </div>
 
                 {/* Right: Immutable E&O Raw Evidence Vault List */}
@@ -1724,7 +1890,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
 
             {/* TAB 3: UNDERWRITER NARRATIVE, MISSING INFO CHECKLIST & CLIENT FOLLOW-UP */}
             {activeTab === 'narrative' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.25fr', gap: '18px', alignItems: 'start' }}>
+              <div className="copilot-two-col">
                 {/* Left: Missing Info Checklist & Client Follow-Up Draft */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   <div className="glass-panel" style={{ padding: '20px' }}>
@@ -1895,12 +2061,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
                   </div>
                   <form
                     onSubmit={handleAddPlacement}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1.3fr 1.2fr 0.8fr 0.8fr 1.2fr auto',
-                      gap: '10px',
-                      alignItems: 'center',
-                    }}
+                    className="copilot-placement-form"
                   >
                     <input
                       type="text"
@@ -2328,6 +2489,123 @@ export default function ProducerCopilot({ initialClientId = null }) {
           </div>
         ) : null}
       </div>
+
+      {/* Modal: 1-Tap Mobile Quick Walk-In Mode */}
+      {showWalkInModal && (
+        <div className="modal-overlay" onClick={() => setShowWalkInModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Camera size={20} color="#2563EB" />
+                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
+                  Quick Walk-In Capture (Phone Mode)
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWalkInModal(false)}
+                className="btn btn-ghost btn-sm"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: '13px', color: '#475569', marginBottom: '16px' }}>
+              Auto-creates the Commercial Client + Submission + 7-point COPE Field Checklist in one tap so you can start snapping photos and recording voice memos immediately.
+            </p>
+
+            <form onSubmit={handleQuickWalkIn}>
+              <div className="form-group">
+                <label className="form-label">Business / Prospect Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Pazyryk Rugs"
+                  value={walkInForm.business_name}
+                  onChange={(e) => setWalkInForm({ ...walkInForm, business_name: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Prospect Website (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. https://pazyrykrug.ca/"
+                  value={walkInForm.website_url}
+                  onChange={(e) => setWalkInForm({ ...walkInForm, website_url: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">Owner / Contact Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Owner / Manager"
+                    value={walkInForm.contact_name}
+                    onChange={(e) => setWalkInForm({ ...walkInForm, contact_name: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Policy Line</label>
+                  <select
+                    value={walkInForm.specialty_line}
+                    onChange={(e) =>
+                      setWalkInForm({ ...walkInForm, specialty_line: e.target.value })
+                    }
+                    className="form-select"
+                  >
+                    <option value="general_commercial">Commercial P&C (COPE)</option>
+                    <option value="construction">Construction & Wrap-Up</option>
+                    <option value="cyber_ai">Cyber, Tech E&O & AI</option>
+                    <option value="marine">Commercial Marine</option>
+                    <option value="environmental">Environmental / CPL</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '18px' }}>
+                <label className="form-label">Quick Initial Observation (Optional)</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Retail rug showroom ~3,500 sq ft, brick building, monitored alarm..."
+                  value={walkInForm.initial_note}
+                  onChange={(e) => setWalkInForm({ ...walkInForm, initial_note: e.target.value })}
+                  className="form-textarea"
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowWalkInModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingWalkIn}
+                  className="btn btn-primary"
+                >
+                  <Camera size={15} />
+                  <span>{submittingWalkIn ? 'Opening Capture...' : 'Start Walk-In Capture'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Create New Pre-Bind Submission */}
       {showNewModal && (

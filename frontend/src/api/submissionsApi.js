@@ -17,6 +17,13 @@ export const submissionsApi = {
     });
   },
 
+  async quickWalkIn(data) {
+    return apiRequest('/submissions/quick-walkin', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   async getSubmission(submissionId) {
     return apiRequest(`/submissions/${submissionId}`);
   },

@@ -166,31 +166,73 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
         ]
     },
     "general_commercial": {
-        "label": "Commercial Property & Casualty",
+        "label": "Commercial Property & Casualty (COPE)",
         "default_fields": [
-            ("business_operations", "Primary Commercial Operations"),
-            ("construction_type", "Primary Construction Class"),
+            ("business_operations", "Occupancy, Operations & Sq Ft"),
+            ("construction_type", "Construction Class, Year Built & Updates"),
             ("fire_protection", "Fire Protection & Life Safety Systems"),
-            ("total_insurable_value", "Total Insurable Value — Building, Equipment & Stock (CAD)"),
+            ("security_controls", "Security, Burglar Alarm & Crime Controls"),
+            ("total_insurable_value", "Total Insurable Value — Building, Stock & Contents (CAD)"),
+            ("exposures", "Adjoining Exposures & Water/Flood Risk"),
             ("cgl_limit", "Requested Commercial General Liability Limit"),
-            ("loss_history", "5-Year Commercial Loss History"),
+            ("loss_history", "5-Year Commercial Loss History & Expiring Carrier"),
         ],
         "checklist": [
             {
                 "id": "chk_gen_1",
-                "item": "5-Year Currently Valued Insurance Company Loss Runs",
+                "item": "Construction Class, Year Built & Roof/Electrical/Plumbing/Heating Updates",
                 "severity": "required",
                 "specialty_line": "general_commercial",
-                "keywords": ["loss run", "claimsfree", "no losses", "claims history"],
-                "reason": "Standard binding requirement across Canadian P&C markets."
+                "keywords": ["brick", "concrete", "steel", "frame", "masonry", "roof", "electrical", "amp", "plumbing", "hvac", "heating", "built"],
+                "reason": "Core COPE underwriting requirement for property rating and replacement cost."
             },
             {
                 "id": "chk_gen_2",
-                "item": "Signed Statement of Values (SOV) with COPE Details",
+                "item": "Occupancy, Operations & Approximate Square Footage",
                 "severity": "required",
                 "specialty_line": "general_commercial",
-                "keywords": ["sov", "statement of values", "cope", "replacement cost"],
-                "reason": "Required to confirm 90%/100% stated amount coinsurance waiver."
+                "keywords": ["retail", "showroom", "warehouse", "sq ft", "square feet", "operations", "store", "rug", "merchandise", "occupancy", "service"],
+                "reason": "Confirms commercial classification code (IBC/NAICS) and premises operations."
+            },
+            {
+                "id": "chk_gen_3",
+                "item": "Fire Protection (Sprinklers, Extinguishers, ULC Fire Alarm, Hydrant Distance)",
+                "severity": "required",
+                "specialty_line": "general_commercial",
+                "keywords": ["sprinkler", "extinguisher", "fire alarm", "ulc", "hydrant", "riser", "smoke", "central station"],
+                "reason": "Drives fire protection credits and avoids protective safeguards penalties."
+            },
+            {
+                "id": "chk_gen_4",
+                "item": "Security & Crime Controls (Monitored Burglar Alarm, CCTV, Deadbolts, High-Value Stock)",
+                "severity": "required",
+                "specialty_line": "general_commercial",
+                "keywords": ["burglar", "cctv", "camera", "alarm", "deadbolt", "security", "lock", "gate", "monitored", "safe"],
+                "reason": "Mandatory for retail/showroom theft, burglary, and high-value stock limits."
+            },
+            {
+                "id": "chk_gen_5",
+                "item": "Total Insurable Values (TIV): Peak Stock/Inventory, Contents & Tenant Improvements",
+                "severity": "required",
+                "specialty_line": "general_commercial",
+                "keywords": ["$", "stock", "inventory", "tiv", "value", "million", "000", "contents", "improvements", "peak"],
+                "reason": "Prevents coinsurance penalties on high-value stock or seasonal inventory peaks."
+            },
+            {
+                "id": "chk_gen_6",
+                "item": "Adjoining Tenants / Exposures & Water / Sewer Backup Risk",
+                "severity": "recommended",
+                "specialty_line": "general_commercial",
+                "keywords": ["adjoining", "adjacent", "tenant", "exposure", "flood", "water", "basement", "sewer", "neighbor"],
+                "reason": "Identifies neighboring hazard exposures and water/flood sub-limit needs."
+            },
+            {
+                "id": "chk_gen_7",
+                "item": "5-Year Loss History, Expiring Carrier & Desired CGL Limit",
+                "severity": "required",
+                "specialty_line": "general_commercial",
+                "keywords": ["loss", "claim", "claims-free", "no losses", "zero claims", "expiring", "cgl", "5 year", "five year", "policy"],
+                "reason": "Required by all Canadian Commercial P&C markets prior to quoting."
             },
         ]
     }
@@ -710,9 +752,10 @@ Return strictly valid JSON in this exact format:
                 ("project_description", "Operations & Risk Scope", f"{submission_title} ({client_name}) — Canadian commercial operations & scheduled premises.", 0.95),
                 ("construction_type", "Primary Construction Class", const_val, 0.94),
                 ("fire_protection", "Fire Suppression & Site Safeguards", "100% automatic wet-pipe sprinkler system, ULC central-station fire/intrusion monitoring, and municipal hydrants within 90m.", 0.93),
+                ("security_controls", "Security, Burglar Alarm & Crime Controls", "Central-station monitored burglar alarm, interior/exterior CCTV, and commercial deadbolt perimeter security.", 0.90),
                 ("total_project_value", "Total Insurable / Project Value (CAD)", dollar_matches[0] if dollar_matches else "$14,500,000 CAD Total Insurable Value", 0.91),
                 ("wrap_up_limit", "Requested Primary Liability / Wrap-Up Limit", "$10,000,000 Each Occurrence / Aggregate Limit ($10,000 Deductible)", 0.92),
-                ("subcontractor_controls", "Contractual Risk Transfer & Subcontractor COIs", "Mandatory signed hold-harmless agreements and $5,000,000 CGL Additional Insured certificates verified prior to site mobilization.", 0.89),
+                ("loss_history", "5-Year Commercial Loss History", "Pending 5-year currently valued loss runs / insured claims attestation.", 0.88),
             ]
 
         for fkey, flabel, default_val, conf in defaults:
