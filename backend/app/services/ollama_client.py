@@ -154,10 +154,11 @@ class OllamaClient:
         b64_img = base64.b64encode(resized_bytes).decode("utf-8")
         prompt = f"""Analyze this commercial insurance site inspection photo ({filename}) for a {specialty_line} underwriting submission.
 Identify visible physical characteristics relevant to commercial underwriting:
-- Construction materials / framing (e.g., steel frame, mass timber, masonry, concrete, joisted masonry)
-- Fire protection & life safety (e.g., wet/dry sprinkler risers, extinguishers, hydrants, alarm panels)
-- Operations, equipment, vessels, or environmental controls visible
-- Potential hazards, housekeeping, or exposures
+- Construction materials / exterior or interior framing (e.g., brick, masonry, concrete, steel frame, wood frame, drywall)
+- Fire protection & life safety (e.g., wet/dry sprinkler heads/risers, fire extinguishers, ULC alarm panels, exit signs)
+- Security & crime controls (e.g., alarm keypad, CCTV cameras, deadbolts, security gates)
+- Mechanical / electrical (e.g., breaker panel, HVAC/furnace, plumbing)
+- Occupancy, stock/inventory, or housekeeping exposures
 
 Return strictly valid JSON:
 {{
@@ -167,7 +168,8 @@ Return strictly valid JSON:
     "Specific visible fact 2"
   ],
   "detected_hazards": [],
-  "protective_safeguards": []
+  "protective_safeguards": [],
+  "detected_categories": ["construction_interior|construction_exterior|fire_protection|security|electrical_mechanical|occupancy_stock"]
 }}"""
         system = "You are a senior commercial insurance risk engineer inspecting site photos. Output strictly valid JSON."
         resp_text = await self.generate_multimodal(
@@ -192,6 +194,7 @@ Return strictly valid JSON:
                         "observations": parsed.get("observations") or [],
                         "detected_hazards": parsed.get("detected_hazards") or [],
                         "protective_safeguards": parsed.get("protective_safeguards") or [],
+                        "detected_categories": parsed.get("detected_categories") or [],
                         "engine": f"Ollama Multimodal ({self.vision_model})"
                     }
             except Exception as e:

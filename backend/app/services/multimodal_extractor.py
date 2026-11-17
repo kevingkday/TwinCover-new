@@ -184,6 +184,8 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "severity": "required",
                 "specialty_line": "general_commercial",
                 "keywords": ["brick", "concrete", "steel", "frame", "masonry", "roof", "electrical", "amp", "plumbing", "hvac", "heating", "built"],
+                "full_keywords": ["brick", "concrete", "steel frame", "masonry", "joisted", "fire resistive", "exterior wall"],
+                "photo_prompt": "Take 1 exterior photo (front/side walls & roof line) + 1 electrical panel photo",
                 "reason": "Core COPE underwriting requirement for property rating and replacement cost."
             },
             {
@@ -191,7 +193,9 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "item": "Occupancy, Operations & Approximate Square Footage",
                 "severity": "required",
                 "specialty_line": "general_commercial",
-                "keywords": ["retail", "showroom", "warehouse", "sq ft", "square feet", "operations", "store", "rug", "merchandise", "occupancy", "service"],
+                "keywords": ["retail", "showroom", "warehouse", "sq ft", "square feet", "operations", "store", "rug", "merchandise", "occupancy", "service", "kitchen", "condo", "office"],
+                "full_keywords": ["sq ft", "square feet", "square foot"],
+                "photo_prompt": "Take 1 wide interior photo showing main operations / showroom floor",
                 "reason": "Confirms commercial classification code (IBC/NAICS) and premises operations."
             },
             {
@@ -200,6 +204,8 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "severity": "required",
                 "specialty_line": "general_commercial",
                 "keywords": ["sprinkler", "extinguisher", "fire alarm", "ulc", "hydrant", "riser", "smoke", "central station"],
+                "full_keywords": ["sprinkler", "fire alarm", "central station"],
+                "photo_prompt": "Take photo of sprinkler riser / fire extinguisher / fire alarm panel",
                 "reason": "Drives fire protection credits and avoids protective safeguards penalties."
             },
             {
@@ -208,6 +214,8 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "severity": "required",
                 "specialty_line": "general_commercial",
                 "keywords": ["burglar", "cctv", "camera", "alarm", "deadbolt", "security", "lock", "gate", "monitored", "safe"],
+                "full_keywords": ["burglar", "cctv", "monitored"],
+                "photo_prompt": "Take photo of alarm keypad, CCTV camera, or front door deadbolt/gate",
                 "reason": "Mandatory for retail/showroom theft, burglary, and high-value stock limits."
             },
             {
@@ -216,6 +224,8 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "severity": "required",
                 "specialty_line": "general_commercial",
                 "keywords": ["stock", "inventory", "tiv", "insurable value", "statement of values", "contents", "tenant improvements", "peak stock"],
+                "full_keywords": ["stock", "inventory", "tiv"],
+                "photo_prompt": "Ask insured for peak stock/inventory ($) & snap photo of main stock/equipment",
                 "reason": "Prevents coinsurance penalties on high-value stock or seasonal inventory peaks."
             },
             {
@@ -224,6 +234,8 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "severity": "recommended",
                 "specialty_line": "general_commercial",
                 "keywords": ["adjoining", "adjacent", "neighboring", "flood", "sewer backup", "water damage"],
+                "full_keywords": ["adjoining", "adjacent", "sewer backup"],
+                "photo_prompt": "Take 1 exterior photo showing neighboring buildings/tenants",
                 "reason": "Identifies neighboring hazard exposures and water/flood sub-limit needs."
             },
             {
@@ -232,6 +244,8 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "severity": "required",
                 "specialty_line": "general_commercial",
                 "keywords": ["loss run", "loss history", "claims-free", "no losses", "zero claims", "claims history", "5 year", "five year"],
+                "full_keywords": ["loss run", "no losses", "zero claims", "claims-free"],
+                "photo_prompt": "Ask insured: Any claims in last 5 years? Who is current insurer?",
                 "reason": "Required by all Canadian Commercial P&C markets prior to quoting."
             },
         ]
@@ -497,18 +511,37 @@ class MultimodalExtractionEngine:
                 flat_citations=flat_citations
             )
 
-        # Evaluate Missing Info Checklist against captured evidence
+        # Evaluate 3-State Missing Info Checklist ('missing' | 'partial' | 'complete') against captured evidence
         combined_evidence_lower = evidence_digest.lower()
         checklist: List[Dict[str, Any]] = []
         for item_tmpl in spec_meta["checklist"]:
             keywords = item_tmpl.get("keywords", [])
-            is_resolved = any(kw in combined_evidence_lower for kw in keywords)
+            full_keywords = item_tmpl.get("full_keywords", keywords)
+            matched_kws = [kw for kw in keywords if kw in combined_evidence_lower]
+            matched_full = [kw for kw in full_keywords if kw in combined_evidence_lower]
+
+            if matched_full and len(matched_kws) >= 2:
+                item_status = "complete"
+                is_resolved = True
+                ev_summary = f"Verified via captured evidence ({', '.join(matched_kws[:4])})."
+            elif matched_kws:
+                item_status = "partial"
+                is_resolved = False
+                ev_summary = f"Partial info captured ({', '.join(matched_kws[:3])}) — {item_tmpl.get('photo_prompt') or 'confirm remaining details on site.'}"
+            else:
+                item_status = "missing"
+                is_resolved = False
+                ev_summary = None
+
             checklist.append({
                 "id": item_tmpl["id"],
                 "item": item_tmpl["item"],
                 "severity": item_tmpl["severity"],
                 "specialty_line": specialty,
                 "resolved": is_resolved,
+                "status": item_status,
+                "evidence_summary": ev_summary,
+                "photo_prompt": item_tmpl.get("photo_prompt"),
                 "reason": item_tmpl["reason"]
             })
 

@@ -318,6 +318,9 @@ async def quick_walkin_capture(
             "severity": item["severity"],
             "specialty_line": spec_line,
             "resolved": False,
+            "status": "missing",
+            "evidence_summary": None,
+            "photo_prompt": item.get("photo_prompt"),
             "reason": item["reason"],
         }
         for item in spec_tmpl["checklist"]

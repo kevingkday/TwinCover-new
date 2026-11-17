@@ -410,8 +410,9 @@ export default function ProducerCopilot({ initialClientId = null }) {
         const voiceFile = new File([blob], `field_voice_memo_${timestamp}.webm`, {
           type: 'audio/webm',
         });
-        setStagedFiles((prev) => [...prev, voiceFile]);
         stream.getTracks().forEach((t) => t.stop());
+        // Auto-analyze voice memo immediately so the COPE checklist updates on the fly!
+        autoCaptureFiles([voiceFile], 'Voice Memo');
       };
       mediaRecorderRef.current = recorder;
       recorder.start();
@@ -460,6 +461,53 @@ export default function ProducerCopilot({ initialClientId = null }) {
     } finally {
       setSubmittingWalkIn(false);
     }
+  };
+
+  const [photoShotTag, setPhotoShotTag] = useState('site');
+
+  const autoCaptureFiles = async (filesToUpload, sourceLabel = 'Field Capture') => {
+    if (!selectedSub || !filesToUpload || filesToUpload.length === 0) return;
+    setUploadingCapture(true);
+    let offlineRecord = null;
+    try {
+      offlineRecord = await offlineCaptureQueue.enqueueCapture({
+        submissionId: selectedSub.id,
+        files: filesToUpload,
+        textNote: '',
+        noteTitle: '',
+      });
+      await refreshPendingOffline();
+    } catch (idbErr) {
+      console.warn('IndexedDB enqueue skipped:', idbErr);
+    }
+
+    try {
+      const job = await submissionsApi.captureEvidence(selectedSub.id, {
+        files: filesToUpload,
+        textNote: '',
+        noteTitle: '',
+      });
+      if (offlineRecord) {
+        await offlineCaptureQueue.removeCapture(offlineRecord.id);
+        await refreshPendingOffline();
+      }
+      setActiveJob(job);
+      setReceiptBanner(
+        `${sourceLabel} saved — updating COPE checklist on the fly (${job.id})...`
+      );
+    } catch (err) {
+      await refreshPendingOffline();
+      setReceiptBanner(
+        `Offline: ${sourceLabel} saved locally in IndexedDB. Will auto-sync when online.`
+      );
+    } finally {
+      setUploadingCapture(false);
+    }
+  };
+
+  const triggerGuidedPhoto = (tag) => {
+    setPhotoShotTag(tag);
+    setTimeout(() => cameraInputRef.current?.click(), 20);
   };
 
   const handleCaptureSubmit = async (e) => {
@@ -1559,40 +1607,66 @@ export default function ProducerCopilot({ initialClientId = null }) {
                           {editableChecklist.every((c) => c.resolved) ? 'All COPE Items Covered' : 'Ask Before Leaving'}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {editableChecklist.map((chk) => (
-                          <div
-                            key={chk.id}
-                            onClick={() => handleToggleChecklistItem(chk.id)}
-                            style={{
-                              padding: '8px 10px',
-                              borderRadius: '8px',
-                              background: chk.resolved ? '#ECFDF5' : '#FFFBEB',
-                              border: `1px solid ${chk.resolved ? '#A7F3D0' : '#FDE68A'}`,
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '8px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={!!chk.resolved}
-                              onChange={() => {}}
-                              style={{ marginTop: '2px', cursor: 'pointer' }}
-                            />
-                            <span
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {editableChecklist.map((chk) => {
+                          const st = chk.status || (chk.resolved ? 'complete' : 'missing');
+                          const isComplete = st === 'complete' || chk.resolved;
+                          const isPartial = !isComplete && st === 'partial';
+                          const bg = isComplete ? '#ECFDF5' : isPartial ? '#EFF6FF' : '#FFFBEB';
+                          const border = isComplete ? '#A7F3D0' : isPartial ? '#BFDBFE' : '#FDE68A';
+                          const titleColor = isComplete ? '#065F46' : isPartial ? '#1E3A8A' : '#92400E';
+                          return (
+                            <div
+                              key={chk.id}
+                              onClick={() => handleToggleChecklistItem(chk.id)}
                               style={{
-                                fontWeight: 600,
-                                color: chk.resolved ? '#065F46' : '#92400E',
-                                textDecoration: chk.resolved ? 'line-through' : 'none',
+                                padding: '9px 11px',
+                                borderRadius: '8px',
+                                background: bg,
+                                border: `1px solid ${border}`,
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
                               }}
                             >
-                              {chk.item}
-                            </span>
-                          </div>
-                        ))}
+                              <input
+                                type="checkbox"
+                                checked={!!isComplete}
+                                onChange={() => {}}
+                                style={{ marginTop: '2px', cursor: 'pointer' }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                  <span
+                                    style={{
+                                      fontWeight: 700,
+                                      color: titleColor,
+                                      textDecoration: isComplete ? 'line-through' : 'none',
+                                    }}
+                                  >
+                                    {chk.item}
+                                  </span>
+                                  {isPartial && (
+                                    <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '999px', background: '#DBEAFE', color: '#1D4ED8', flexShrink: 0 }}>
+                                      PARTIAL
+                                    </span>
+                                  )}
+                                </div>
+                                {chk.evidence_summary ? (
+                                  <div style={{ fontSize: '11px', color: isComplete ? '#047857' : '#1D4ED8', marginTop: '2px' }}>
+                                    {chk.evidence_summary}
+                                  </div>
+                                ) : chk.photo_prompt ? (
+                                  <div style={{ fontSize: '11px', color: '#B45309', marginTop: '2px' }}>
+                                    Prompt: {chk.photo_prompt}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1615,18 +1689,25 @@ export default function ProducerCopilot({ initialClientId = null }) {
                     onChange={(e) => {
                       const chosen = Array.from(e.target.files || []);
                       if (chosen.length > 0) {
-                        setStagedFiles((prev) => [...prev, ...chosen]);
+                        const taggedFiles = chosen.map((f) => {
+                          const taggedName = f.name.startsWith(photoShotTag)
+                            ? f.name
+                            : `${photoShotTag}_${f.name}`;
+                          return new File([f], taggedName, { type: f.type });
+                        });
+                        // Auto-analyze snapped photo immediately so checklist updates on the fly!
+                        autoCaptureFiles(taggedFiles, `Photo (${photoShotTag.replace(/_/g, ' ')})`);
                       }
                       e.target.value = '';
                     }}
                     style={{ display: 'none' }}
                   />
 
-                  {/* Big Thumb-Friendly Mobile Capture Buttons */}
+                  {/* Big Thumb-Friendly Voice & General Photo Capture Buttons */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
                     <button
                       type="button"
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={() => triggerGuidedPhoto('site')}
                       className="btn btn-primary"
                       style={{
                         padding: '14px 12px',
@@ -1656,8 +1737,63 @@ export default function ProducerCopilot({ initialClientId = null }) {
                       }}
                     >
                       {isRecording ? <Square size={18} /> : <Mic size={18} />}
-                      <span>{isRecording ? `Stop (${recordingSeconds}s)` : 'Voice Memo'}</span>
+                      <span>{isRecording ? `Stop & Analyze (${recordingSeconds}s)` : 'Voice Memo'}</span>
                     </button>
+                  </div>
+
+                  {/* Guided Photo Shot List ("What is AI looking for?") */}
+                  <div style={{
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    marginBottom: '14px',
+                  }}>
+                    <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Guided Photo Shots (Auto-Analyzed for COPE):
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => triggerGuidedPhoto('exterior_walls')}
+                        className="btn btn-secondary btn-sm"
+                        style={{ justifyContent: 'flex-start', fontSize: '11.5px', padding: '7px 9px' }}
+                        title="Looks for: Brick/steel/wood framing, roof line, adjoining neighbors"
+                      >
+                        <Camera size={13} color="#2563EB" />
+                        <span>Exterior &amp; Walls</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerGuidedPhoto('interior_stock')}
+                        className="btn btn-secondary btn-sm"
+                        style={{ justifyContent: 'flex-start', fontSize: '11.5px', padding: '7px 9px' }}
+                        title="Looks for: Operations, inventory/stock, ceilings & housekeeping"
+                      >
+                        <Camera size={13} color="#2563EB" />
+                        <span>Interior &amp; Stock</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerGuidedPhoto('electrical_hvac')}
+                        className="btn btn-secondary btn-sm"
+                        style={{ justifyContent: 'flex-start', fontSize: '11.5px', padding: '7px 9px' }}
+                        title="Looks for: Breaker panel amperage, furnace/HVAC, plumbing"
+                      >
+                        <Camera size={13} color="#2563EB" />
+                        <span>Electrical / HVAC</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerGuidedPhoto('fire_security')}
+                        className="btn btn-secondary btn-sm"
+                        style={{ justifyContent: 'flex-start', fontSize: '11.5px', padding: '7px 9px' }}
+                        title="Looks for: Sprinklers, extinguishers, ULC alarm panel, CCTV"
+                      >
+                        <Camera size={13} color="#2563EB" />
+                        <span>Fire &amp; Security</span>
+                      </button>
+                    </div>
                   </div>
 
                   <form onSubmit={handleCaptureSubmit}>

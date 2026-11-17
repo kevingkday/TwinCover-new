@@ -309,6 +309,9 @@ class MissingInfoItem(BaseModel):
     severity: str = "required"  # required, recommended
     specialty_line: str = "general_commercial"
     resolved: bool = False
+    status: str = "missing"  # missing, partial, complete
+    evidence_summary: Optional[str] = None
+    photo_prompt: Optional[str] = None
     reason: Optional[str] = None
 
 
