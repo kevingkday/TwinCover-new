@@ -100,6 +100,39 @@ class TranscriptionService:
         except Exception:
             return False
 
+    @staticmethod
+    def _decode_audio_to_16k_mono(file_path: str):
+        """
+        Decode any audio container (.webm, .m4a, .mp3, .wav, .ogg) into a 16kHz mono float32
+        NumPy array using PyAV (`av`) without passing `metadata_errors` (removed in av>=19).
+        """
+        import av
+        import numpy as np
+
+        container = av.open(file_path)
+        try:
+            resampler = av.audio.resampler.AudioResampler(
+                format="s16",
+                layout="mono",
+                rate=16000,
+            )
+            chunks = []
+            for frame in container.decode(audio=0):
+                for resampled in resampler.resample(frame):
+                    arr = resampled.to_ndarray()
+                    chunks.append(arr.reshape(-1))
+            # Flush resampler
+            for resampled in resampler.resample(None):
+                arr = resampled.to_ndarray()
+                chunks.append(arr.reshape(-1))
+        finally:
+            container.close()
+
+        if not chunks:
+            return np.zeros((0,), dtype=np.float32)
+        pcm_s16 = np.concatenate(chunks)
+        return pcm_s16.astype(np.float32) / 32768.0
+
     def transcribe_file(
         self,
         file_path: str,
@@ -127,17 +160,39 @@ class TranscriptionService:
 
         try:
             model = self._get_or_load_model()
-            segments_gen, info = model.transcribe(
-                file_path,
-                beam_size=5,
-                vad_filter=True,
-                vad_parameters=dict(min_silence_duration_ms=400),
-            )
+            audio_input = self._decode_audio_to_16k_mono(file_path)
+            if audio_input.size == 0:
+                raise ValueError("Decoded audio stream is empty")
+
+            try:
+                segments_gen, info = model.transcribe(
+                    audio_input,
+                    beam_size=5,
+                    vad_filter=True,
+                    vad_parameters=dict(min_silence_duration_ms=400),
+                )
+                segments_raw = list(segments_gen)
+            except Exception as cuda_err:
+                if "cublas" in str(cuda_err).lower() or "cuda" in str(cuda_err).lower():
+                    logger.warning(f"CUDA runtime unavailable for faster-whisper ({cuda_err}); reloading on CPU int8.")
+                    from faster_whisper import WhisperModel
+                    self.device = "cpu"
+                    self.compute_type = "int8"
+                    self._model = WhisperModel(self.model_name, device="cpu", compute_type="int8")
+                    segments_gen, info = self._model.transcribe(
+                        audio_input,
+                        beam_size=5,
+                        vad_filter=True,
+                        vad_parameters=dict(min_silence_duration_ms=400),
+                    )
+                    segments_raw = list(segments_gen)
+                else:
+                    raise
 
             segments_list: List[Dict[str, Any]] = []
             full_text_parts: List[str] = []
 
-            for seg in segments_gen:
+            for seg in segments_raw:
                 seg_text = (seg.text or "").strip()
                 if not seg_text:
                     continue
@@ -241,57 +296,20 @@ class TranscriptionService:
                 "engine": f"faster-whisper ({self.model_name})"
             }
 
-        # Specialty-aware default field walk-through segments
-        if specialty_line == "cyber_ai":
-            segments = [
-                {
-                    "start": 0.0,
-                    "end": 18.0,
-                    "reference": "00:00 - 00:18",
-                    "text": "Producer walkthrough with CTO: insured operates a B2B SaaS & clinical AI platform hosted on AWS ca-central-1 in Montreal with $18.5M annual recurring revenue."
-                },
-                {
-                    "start": 19.0,
-                    "end": 41.0,
-                    "reference": "00:19 - 00:41",
-                    "text": "Phishing-resistant MFA is enforced via Okta across all privileged, email, and production cloud accounts, with CrowdStrike Falcon EDR on 100% of endpoints."
-                },
-                {
-                    "start": 42.0,
-                    "end": 58.0,
-                    "reference": "00:42 - 00:58",
-                    "text": "Requesting $5,000,000 Cyber, Tech E&O, and AI Liability limits with a $25,000 retention; immutable S3 Object Lock backups are tested quarterly."
-                }
-            ]
-        else:
-            segments = [
-                {
-                    "start": 0.0,
-                    "end": 22.0,
-                    "reference": "00:00 - 00:22",
-                    "text": "On-site producer walkthrough: primary facility is a 68,000 sq ft industrial structure in BC with $14,500,000 total insurable building and equipment value."
-                },
-                {
-                    "start": 23.0,
-                    "end": 41.0,
-                    "reference": "00:23 - 00:41",
-                    "text": "Operations include structural steel fabrication and regional warehousing with 24/7 ULC-monitored central station fire and intrusion alarms."
-                },
-                {
-                    "start": 42.0,
-                    "end": 58.0,
-                    "reference": "00:42 - 00:58",
-                    "text": "Facility built in 2019, full non-combustible steel frame, wet sprinklered throughout with municipal hydrants within 90 metres. Seeking $10,000,000 Wrap-Up / CGL limit."
-                }
-            ]
-
         return {
             "filename": filename,
             "language": "en",
-            "duration_seconds": 58.0,
-            "full_text": " ".join(s["text"] for s in segments),
-            "segments": segments,
-            "engine": f"faster-whisper ({self.model_name})"
+            "duration_seconds": 0.0,
+            "full_text": f"[Audio captured in Evidence Vault ({filename}) — awaiting local faster-whisper transcription.]",
+            "segments": [
+                {
+                    "start": 0.0,
+                    "end": 0.0,
+                    "reference": "00:00 - 00:00",
+                    "text": f"Audio file {filename} saved to Evidence Vault; no spoken words detected or transcription unavailable.",
+                }
+            ],
+            "engine": f"faster-whisper ({self.model_name}) [No-Speech/Fallback]"
         }
 
 

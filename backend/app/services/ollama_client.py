@@ -100,6 +100,7 @@ class OllamaClient:
             "options": {
                 "temperature": temperature,
                 "top_p": 0.9,
+                "num_ctx": 16384,
             }
         }
         if images_b64:
@@ -119,6 +120,26 @@ class OllamaClient:
             logger.error(f"Ollama multimodal inference error: {exc}")
         return None
 
+    @staticmethod
+    def _resize_image_for_vlm(image_bytes: bytes, max_dim: int = 1280) -> bytes:
+        """Downscale high-resolution mobile photos so qwen2.5vl:7b processes them fast and within context."""
+        try:
+            import io
+            from PIL import Image, ImageOps
+
+            img = Image.open(io.BytesIO(image_bytes))
+            img = ImageOps.exif_transpose(img)
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+            w, h = img.size
+            if max(w, h) > max_dim:
+                img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+            out = io.BytesIO()
+            img.save(out, format="JPEG", quality=85)
+            return out.getvalue()
+        except Exception:
+            return image_bytes
+
     async def analyze_site_photo(
         self,
         image_bytes: bytes,
@@ -129,7 +150,8 @@ class OllamaClient:
         Inspect a commercial site photo using consolidated `qwen2.5vl:7b` vision-language model
         to extract underwriting observations, construction class, fire protection, and hazards.
         """
-        b64_img = base64.b64encode(image_bytes).decode("utf-8")
+        resized_bytes = self._resize_image_for_vlm(image_bytes, max_dim=1280)
+        b64_img = base64.b64encode(resized_bytes).decode("utf-8")
         prompt = f"""Analyze this commercial insurance site inspection photo ({filename}) for a {specialty_line} underwriting submission.
 Identify visible physical characteristics relevant to commercial underwriting:
 - Construction materials / framing (e.g., steel frame, mass timber, masonry, concrete, joisted masonry)

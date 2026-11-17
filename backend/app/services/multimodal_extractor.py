@@ -215,7 +215,7 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "item": "Total Insurable Values (TIV): Peak Stock/Inventory, Contents & Tenant Improvements",
                 "severity": "required",
                 "specialty_line": "general_commercial",
-                "keywords": ["$", "stock", "inventory", "tiv", "value", "million", "000", "contents", "improvements", "peak"],
+                "keywords": ["stock", "inventory", "tiv", "insurable value", "statement of values", "contents", "tenant improvements", "peak stock"],
                 "reason": "Prevents coinsurance penalties on high-value stock or seasonal inventory peaks."
             },
             {
@@ -223,7 +223,7 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "item": "Adjoining Tenants / Exposures & Water / Sewer Backup Risk",
                 "severity": "recommended",
                 "specialty_line": "general_commercial",
-                "keywords": ["adjoining", "adjacent", "tenant", "exposure", "flood", "water", "basement", "sewer", "neighbor"],
+                "keywords": ["adjoining", "adjacent", "neighboring", "flood", "sewer backup", "water damage"],
                 "reason": "Identifies neighboring hazard exposures and water/flood sub-limit needs."
             },
             {
@@ -231,7 +231,7 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "item": "5-Year Loss History, Expiring Carrier & Desired CGL Limit",
                 "severity": "required",
                 "specialty_line": "general_commercial",
-                "keywords": ["loss", "claim", "claims-free", "no losses", "zero claims", "expiring", "cgl", "5 year", "five year", "policy"],
+                "keywords": ["loss run", "loss history", "claims-free", "no losses", "zero claims", "claims history", "5 year", "five year"],
                 "reason": "Required by all Canadian Commercial P&C markets prior to quoting."
             },
         ]

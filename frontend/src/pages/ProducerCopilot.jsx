@@ -31,9 +31,64 @@ import {
   Scale,
 } from 'lucide-react';
 import { submissionsApi } from '../api/submissionsApi';
+import { apiRequest } from '../api/apiClient';
 import { clientsApi } from '../api/clientsApi';
 import { lettersApi } from '../api/lettersApi';
 import { offlineCaptureQueue } from '../utils/offlineCaptureQueue';
+
+function VaultMediaPreview({ artifact }) {
+  const [mediaUrl, setMediaUrl] = useState(null);
+
+  useEffect(() => {
+    if (!artifact || (artifact.artifact_type !== 'photo' && artifact.artifact_type !== 'audio')) {
+      return;
+    }
+    let active = true;
+    let objUrl = null;
+    apiRequest(`/submissions/artifacts/${artifact.id}/download`, { responseType: 'blob' })
+      .then((blob) => {
+        if (!active) return;
+        objUrl = window.URL.createObjectURL(blob);
+        setMediaUrl(objUrl);
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+      if (objUrl) window.URL.revokeObjectURL(objUrl);
+    };
+  }, [artifact?.id, artifact?.artifact_type]);
+
+  if (!mediaUrl) return null;
+
+  if (artifact.artifact_type === 'photo') {
+    return (
+      <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+        <img
+          src={mediaUrl}
+          alt={artifact.metadata_json?.original_filename || 'Site photo'}
+          style={{
+            width: '100%',
+            maxHeight: '220px',
+            objectFit: 'cover',
+            borderRadius: '8px',
+            border: '1px solid #E2E8F0',
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (artifact.artifact_type === 'audio') {
+    return (
+      <div style={{ marginTop: '8px', marginBottom: '8px' }}>
+        <audio controls src={mediaUrl} style={{ width: '100%', height: '38px' }} />
+      </div>
+    );
+  }
+
+  return null;
+}
 
 export const SPECIALTY_META = {
   construction: {
@@ -1749,8 +1804,8 @@ export default function ProducerCopilot({ initialClientId = null }) {
                       <Upload size={16} />
                       <span>
                         {uploadingCapture
-                          ? 'Locking in Vault & Queuing...'
-                          : 'Capture to Immutable Vault & Extract'}
+                          ? 'Saving & Analyzing...'
+                          : 'Save & Analyze'}
                       </span>
                     </button>
                   </form>
@@ -1853,6 +1908,9 @@ export default function ProducerCopilot({ initialClientId = null }) {
                               </button>
                             </div>
                           </div>
+
+                          {/* Inline Photo Thumbnail or Audio Voice Memo Player */}
+                          <VaultMediaPreview artifact={art} />
 
                           {/* Timestamped Segments / Vision Observations */}
                           {segments.length > 0 && (
