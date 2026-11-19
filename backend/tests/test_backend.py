@@ -703,6 +703,57 @@ def test_mobile_quick_walkin_commercial_pc_cope_checklist():
     assert data["artifact_count"] == 1
 
 
+def test_guided_walkthrough_step_and_duplicate_detection():
+    email = f"wt_{os.urandom(4).hex()}@twincover.com"
+    reg_resp = client.post("/api/auth/register", json={
+        "email": email,
+        "password": "TwinCover2026!",
+        "full_name": "Walkthrough Producer",
+        "agency_name": "Ocean Falls Insurance Services"
+    })
+    assert reg_resp.status_code == 201
+    headers = {"Authorization": f"Bearer {reg_resp.json()['access_token']}"}
+
+    checklist = [
+        {"id": "electrical_panel", "label": "Main Electrical Panel & Amperage", "category": "Systems", "completed": False},
+        {"id": "fire_protection", "label": "Fire Protection & Sprinkler Riser", "category": "Protection", "completed": False},
+    ]
+
+    # Step 1: Capture electrical panel
+    step1 = client.post(
+        "/api/submissions/walkthrough-step",
+        data={
+            "checklist_json": json.dumps(checklist),
+            "transcript": "Here is the main 200-amp panel in the basement",
+            "risk_profile_label": "Commercial Property / COPE",
+        },
+        headers=headers,
+    )
+    assert step1.status_code == 200
+    body1 = step1.json()
+    assert body1["checklist_item_id"] == "electrical_panel"
+    assert body1["already_completed"] is False
+    assert "spoken_feedback" in body1 and body1["spoken_feedback"]
+    assert "next_recommended_item" in body1
+
+    # Step 2: Re-capture electrical panel when already completed -> already_completed MUST be True
+    checklist[0]["completed"] = True
+    step2 = client.post(
+        "/api/submissions/walkthrough-step",
+        data={
+            "checklist_json": json.dumps(checklist),
+            "transcript": "Checking the 200-amp electrical panel again",
+            "risk_profile_label": "Commercial Property / COPE",
+        },
+        headers=headers,
+    )
+    assert step2.status_code == 200
+    body2 = step2.json()
+    assert body2["checklist_item_id"] == "electrical_panel"
+    assert body2["already_completed"] is True
+    assert "already captured" in body2["spoken_feedback"].lower()
+
+
 def teardown_module(module):
     if os.path.exists("./test_twincover.db"):
         try:

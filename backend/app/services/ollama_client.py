@@ -227,6 +227,173 @@ Return strictly valid JSON:
             "engine": f"Sovereign Vision Fallback ({self.vision_model})"
         }
 
+    async def evaluate_walkthrough_step(
+        self,
+        checklist: List[Dict[str, Any]],
+        transcript: str = "",
+        image_bytes: Optional[bytes] = None,
+        risk_profile_label: str = "Commercial Property / COPE",
+    ) -> Dict[str, Any]:
+        """
+        Evaluate a single Guided Field Walk-Through step (current downscaled image <=768px +
+        current spoken transcript + current JSON checklist state) via `qwen2.5vl:7b`,
+        enforcing the strict 7-key JSON schema without retaining historical images.
+        """
+        compact_checklist = [
+            {
+                "id": item.get("id"),
+                "label": item.get("label"),
+                "category": item.get("category"),
+                "completed": bool(item.get("completed")),
+            }
+            for item in checklist
+        ]
+
+        next_uncompleted = next((c["label"] for c in compact_checklist if not c["completed"]), "All items complete")
+
+        prompt = f"""You are a live commercial insurance field inspection copilot guiding a broker on-site for a {risk_profile_label} risk.
+Analyze ONLY the current photo (if provided) and the broker's spoken note against the current checklist state.
+
+Current Checklist JSON:
+{json.dumps(compact_checklist, indent=2)}
+
+Broker Spoken Note / Transcript:
+"{transcript or 'No spoken note provided — inspect the photo only.'}"
+
+Instructions:
+1. Identify what item was just captured (`detected_item`) and match it to the best `checklist_item_id` from the Current Checklist JSON (or null if none matches).
+2. Check if that matched `checklist_item_id` already has `"completed": true` in the Current Checklist JSON. If it is already true, set `"already_completed": true` and craft `spoken_feedback` like: "You already captured <item>—next up is {next_uncompleted}."
+3. Extract concrete underwriting key-value pairs into `"extracted_data"` (e.g., {{"amperage": "200A", "panel_type": "Breakers", "construction_class": "Brick Masonry"}}).
+4. List any underwriting hazards or deficiencies in `"red_flags"` (e.g., "Federal Pacific / Stab-Lok panel", "Blocked egress exit", "Missing sprinkler tag", "Open wiring").
+5. Provide a concise, natural 1-sentence `"spoken_feedback"` for hands-free audio playback and set `"next_recommended_item"` to the next uncompleted checklist item label.
+
+Return strictly valid JSON matching this exact schema:
+{{
+  "detected_item": "string",
+  "checklist_item_id": "string or null",
+  "already_completed": false,
+  "extracted_data": {{}},
+  "red_flags": [],
+  "spoken_feedback": "string",
+  "next_recommended_item": "string"
+}}"""
+
+        images_b64 = None
+        if image_bytes:
+            resized = self._resize_image_for_vlm(image_bytes, max_dim=768)
+            images_b64 = [base64.b64encode(resized).decode("utf-8")]
+
+        system = "You are a commercial insurance loss-control field inspector. Output strictly valid JSON."
+        resp_text = await self.generate_multimodal(
+            prompt=prompt,
+            images_b64=images_b64,
+            system=system,
+            json_format=True,
+            temperature=0.0,
+            timeout=45.0,
+        )
+
+        if resp_text:
+            try:
+                clean_str = resp_text.strip()
+                if clean_str.startswith("```"):
+                    clean_str = re.sub(r"^```(?:json)?", "", clean_str)
+                    clean_str = re.sub(r"```$", "", clean_str).strip()
+                parsed = json.loads(clean_str)
+                if isinstance(parsed, dict) and "detected_item" in parsed:
+                    matched_id = parsed.get("checklist_item_id")
+                    matched_item = next((c for c in compact_checklist if c["id"] == matched_id), None)
+                    already_done = bool(parsed.get("already_completed", False))
+                    if matched_item and matched_item["completed"]:
+                        already_done = True
+
+                    remaining = [
+                        c["label"]
+                        for c in compact_checklist
+                        if not c["completed"] and c["id"] != matched_id
+                    ]
+                    fallback_next = remaining[0] if remaining else "All checklist items complete — ready to sync!"
+                    return {
+                        "detected_item": str(parsed.get("detected_item") or "Site Observation"),
+                        "checklist_item_id": matched_id,
+                        "already_completed": already_done,
+                        "extracted_data": parsed.get("extracted_data") if isinstance(parsed.get("extracted_data"), dict) else {},
+                        "red_flags": [str(r) for r in (parsed.get("red_flags") or [])],
+                        "spoken_feedback": str(parsed.get("spoken_feedback") or f"Captured {parsed.get('detected_item')}."),
+                        "next_recommended_item": str(parsed.get("next_recommended_item") or fallback_next),
+                        "engine": f"MicroNode ({self.vision_model})",
+                    }
+            except Exception as exc:
+                logger.warning(f"Failed to parse walkthrough step JSON from {self.vision_model}: {exc}")
+
+        # Deterministic fallback when Ollama is offline or in isolated unit tests
+        return self._deterministic_walkthrough_fallback(compact_checklist, transcript)
+
+    @staticmethod
+    def _deterministic_walkthrough_fallback(
+        compact_checklist: List[Dict[str, Any]],
+        transcript: str,
+    ) -> Dict[str, Any]:
+        t_lower = (transcript or "").lower()
+        keyword_rules = [
+            (["panel", "amp", "200", "breaker", "electrical", "fuse"], "electrical_panel"),
+            (["sprinkler", "riser", "fire", "extinguisher", "hydrant", "ulc", "ansul"], "fire_protection"),
+            (["roof", "drainage", "shingle", "membrane", "tpo", "epdm"], "roof_surface"),
+            (["exterior", "brick", "concrete", "siding", "elevation", "facade"], "exterior_elevations"),
+            (["hvac", "furnace", "boiler", "mechanical", "compressor"], "hvac_mechanical"),
+            (["exit", "egress", "alarm", "stair", "emergency light"], "life_safety"),
+            (["housekeeping", "clutter", "stock", "storage", "hazard", "grease"], "housekeeping_hazards"),
+        ]
+
+        matched_item = None
+        for kws, id_hint in keyword_rules:
+            if any(kw in t_lower for kw in kws):
+                matched_item = next(
+                    (c for c in compact_checklist if id_hint in str(c["id"]) or any(kw in str(c["label"]).lower() for kw in kws)),
+                    None,
+                )
+                if matched_item:
+                    break
+
+        if not matched_item and compact_checklist:
+            matched_item = next((c for c in compact_checklist if not c["completed"]), compact_checklist[0])
+
+        already_done = bool(matched_item and matched_item["completed"])
+        remaining = [
+            c["label"]
+            for c in compact_checklist
+            if not c["completed"] and (not matched_item or c["id"] != matched_item["id"])
+        ]
+        next_item = remaining[0] if remaining else "All checklist items complete — ready to sync!"
+
+        red_flags = []
+        if any(bad in t_lower for bad in ["federal pacific", "stab-lok", "knob and tube", "blocked exit", "expired tag", "leak"]):
+            red_flags.append(f"Potential underwriting hazard noted: {transcript[:120]}")
+
+        extracted_data = {}
+        amp_match = re.search(r"(\d{2,4}\s*-?\s*amp)", transcript or "", re.IGNORECASE)
+        if amp_match:
+            extracted_data["electrical_service"] = amp_match.group(1)
+        elif transcript:
+            extracted_data["field_note"] = transcript[:140]
+
+        det_label = matched_item["label"] if matched_item else "Site Observation"
+        if already_done:
+            feedback = f"You already captured {det_label}—next up is {next_item}."
+        else:
+            feedback = f"Logged {det_label}. Next up is {next_item}."
+
+        return {
+            "detected_item": det_label,
+            "checklist_item_id": matched_item["id"] if matched_item else None,
+            "already_completed": already_done,
+            "extracted_data": extracted_data,
+            "red_flags": red_flags,
+            "spoken_feedback": feedback,
+            "next_recommended_item": next_item,
+            "engine": "MicroNode Deterministic Fallback",
+        }
+
     async def get_embedding(self, text: str) -> Optional[List[float]]:
         """Fetch vector embedding from Ollama nomic-embed-text."""
         url = f"{self.base_url}/api/embeddings"

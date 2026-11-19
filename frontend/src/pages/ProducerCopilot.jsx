@@ -35,6 +35,7 @@ import { apiRequest } from '../api/apiClient';
 import { clientsApi } from '../api/clientsApi';
 import { lettersApi } from '../api/lettersApi';
 import { offlineCaptureQueue } from '../utils/offlineCaptureQueue';
+import GuidedWalkthrough from '../components/GuidedWalkthrough';
 
 function VaultMediaPreview({ artifact }) {
   const [mediaUrl, setMediaUrl] = useState(null);
@@ -1286,6 +1287,16 @@ export default function ProducerCopilot({ initialClientId = null }) {
 
               <button
                 type="button"
+                onClick={() => setActiveTab('walkthrough')}
+                className={`btn ${activeTab === 'walkthrough' ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ fontSize: '13px', padding: '8px 16px', borderRadius: '8px 8px 0 0' }}
+              >
+                <Sparkles size={15} />
+                <span>Guided Walk-Through (AI)</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab('narrative')}
                 className={`btn ${activeTab === 'narrative' ? 'btn-primary' : 'btn-ghost'}`}
                 style={{ fontSize: '13px', padding: '8px 16px', borderRadius: '8px 8px 0 0' }}
@@ -1307,6 +1318,19 @@ export default function ProducerCopilot({ initialClientId = null }) {
                 <span>4. Carrier Placement Matrix ({selectedSub.market_placements?.length || 0})</span>
               </button>
             </div>
+
+            {/* TAB: GUIDED FIELD WALK-THROUGH (WebGPU + MicroNode Fallback) */}
+            {activeTab === 'walkthrough' && (
+              <GuidedWalkthrough
+                submission={selectedSub}
+                onSubmissionUpdated={(updated) => {
+                  setSelectedSub(updated);
+                  setSubmissions((prev) =>
+                    prev.map((s) => (s.id === updated.id ? updated : s))
+                  );
+                }}
+              />
+            )}
 
             {/* TAB 1: SOURCE-CITED RISK PROFILE & PROVENANCE INSPECTOR */}
             {activeTab === 'cited_profile' && (

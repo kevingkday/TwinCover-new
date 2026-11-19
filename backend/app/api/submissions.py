@@ -42,6 +42,7 @@ from app.schemas.schemas import (
 )
 from app.services.export_service import export_service
 from app.services.job_queue import job_queue
+from app.services.ollama_client import ollama_client
 from app.services.quote_diff_engine import quote_diff_engine
 
 logger = logging.getLogger(__name__)
@@ -1037,3 +1038,33 @@ def export_quote_comparison_proposal(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{safe_title}_Quote_Comparison.pdf"'}
     )
+
+
+@router.post("/walkthrough-step")
+async def evaluate_guided_walkthrough_step(
+    checklist_json: str = Form(...),
+    transcript: str = Form(""),
+    risk_profile_label: str = Form("Commercial Property / COPE"),
+    image: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    MicroNode Vision Fallback Endpoint for the Guided Field Walk-Through:
+    Accepts the current downscaled photo (<=768px) + spoken transcript + current JSON checklist state
+    and runs `qwen2.5vl:7b` returning the strict 7-key interactive walk-through JSON response.
+    """
+    try:
+        checklist = json.loads(checklist_json)
+        if not isinstance(checklist, list):
+            checklist = []
+    except Exception:
+        checklist = []
+
+    image_bytes = await image.read() if image else None
+    result = await ollama_client.evaluate_walkthrough_step(
+        checklist=checklist,
+        transcript=transcript,
+        image_bytes=image_bytes,
+        risk_profile_label=risk_profile_label,
+    )
+    return result

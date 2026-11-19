@@ -149,4 +149,18 @@ export const submissionsApi = {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   },
+
+  async evaluateWalkthroughStep({ checklist, transcript = '', riskProfileLabel = 'Commercial Property / COPE', imageBlob = null }) {
+    const formData = new FormData();
+    formData.append('checklist_json', JSON.stringify(checklist || []));
+    formData.append('transcript', transcript || '');
+    formData.append('risk_profile_label', riskProfileLabel);
+    if (imageBlob) {
+      formData.append('image', imageBlob, 'walkthrough_frame.jpg');
+    }
+    return apiRequest('/submissions/walkthrough-step', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };

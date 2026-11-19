@@ -6,8 +6,9 @@
  */
 
 const DB_NAME = 'twincover_offline_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'twincover_offline_captures';
+const WALKTHROUGH_STORE = 'twincover_walkthrough_sessions';
 
 function openOfflineDb() {
   return new Promise((resolve, reject) => {
@@ -22,6 +23,11 @@ function openOfflineDb() {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
         store.createIndex('submissionId', 'submissionId', { unique: false });
         store.createIndex('status', 'status', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(WALKTHROUGH_STORE)) {
+        const wtStore = db.createObjectStore(WALKTHROUGH_STORE, { keyPath: 'id' });
+        wtStore.createIndex('submissionId', 'submissionId', { unique: false });
+        wtStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -113,5 +119,49 @@ export const offlineCaptureQueue = {
       req.onsuccess = () => resolve(true);
       req.onerror = () => reject(req.error);
     });
+  },
+
+  /**
+   * Save or update a Guided Field Walk-Through session in IndexedDB (`twincover_walkthrough_sessions`)
+   * so the entire checklist, extracted COPE fields, red flags, and captured photo blobs work 100% offline.
+   */
+  async saveWalkthroughSession(session) {
+    const db = await openOfflineDb();
+    const record = {
+      ...session,
+      id: session.id || `wt_${session.submissionId || 'local'}`,
+      submissionId: Number(session.submissionId || 0),
+      updatedAt: new Date().toISOString(),
+    };
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(WALKTHROUGH_STORE, 'readwrite');
+      const store = tx.objectStore(WALKTHROUGH_STORE);
+      const req = store.put(record);
+      req.onsuccess = () => resolve(record);
+      req.onerror = () => reject(req.error);
+    });
+  },
+
+  /**
+   * Load the active Guided Field Walk-Through session for a submission from IndexedDB.
+   */
+  async getWalkthroughSession(submissionId) {
+    try {
+      const db = await openOfflineDb();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(WALKTHROUGH_STORE, 'readonly');
+        const store = tx.objectStore(WALKTHROUGH_STORE);
+        const index = store.index('submissionId');
+        const req = index.getAll(Number(submissionId));
+        req.onsuccess = () => {
+          const rows = req.result || [];
+          rows.sort((a, b) => (a.updatedAt > b.updatedAt ? -1 : 1));
+          resolve(rows[0] || null);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      return null;
+    }
   },
 };
