@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Shield, Lock, Mail, Building, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { authApi } from '../api/authApi';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
   const [email, setEmail] = useState('');
@@ -9,6 +10,8 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
   const [agencyName, setAgencyName] = useState('TwinCover Commercial Advisors');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const handleGoogleError = useCallback((msg) => setError(msg), []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -148,6 +151,19 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
             <ArrowRight size={16} />
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '18px 0 14px' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>or</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+        </div>
+
+        <GoogleSignInButton
+          text="signup_with"
+          agencyName={agencyName}
+          onSuccess={onRegisterSuccess}
+          onError={handleGoogleError}
+        />
 
         <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
           Already registered?{' '}

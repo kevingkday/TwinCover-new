@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+
     # External AI & Extraction Services (100% Local Sovereign Node)
     # Consolidated onto single multimodal model (qwen2.5vl:7b) to prevent VRAM model-swapping on 16GB RTX 5080
     EXTRACTOR_URL: str = "http://127.0.0.1:5005/process"

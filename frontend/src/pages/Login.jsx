@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Shield, Lock, Mail, ArrowRight, AlertCircle, KeyRound, Sparkles } from 'lucide-react';
 import { authApi } from '../api/authApi';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function Login({ onLoginSuccess, onSwitchToRegister }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const handleGoogleError = useCallback((msg) => setError(msg), []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,6 +124,18 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
             <ArrowRight size={16} />
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '18px 0 14px' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>or</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+        </div>
+
+        <GoogleSignInButton
+          text="signin_with"
+          onSuccess={onLoginSuccess}
+          onError={handleGoogleError}
+        />
 
         {/* Demo Credentials Quick Button */}
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', textAlign: 'center' }}>

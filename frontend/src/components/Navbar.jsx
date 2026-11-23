@@ -19,9 +19,10 @@ export default function Navbar({
   setActivePage,
   onOpenHealthModal,
   isAuthenticated,
+  currentUser,
   onDemoLoginSuccess,
 }) {
-  const user = authApi.getCurrentUser();
+  const user = currentUser || authApi.getCurrentUser();
   const [health, setHealth] = useState(null);
   const [launchingDemo, setLaunchingDemo] = useState(false);
 
@@ -186,15 +187,28 @@ export default function Navbar({
         </button>
 
         {isAuthenticated ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '8px', borderLeft: '1px solid #E2E8F0' }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px', borderLeft: '1px solid #E2E8F0' }}>
+            <button
+              type="button"
+              onClick={() => setActivePage('profile')}
+              title="View & Edit Broker Profile & Brokerage Details"
+              style={{
+                textAlign: 'right',
+                background: activePage === 'profile' ? '#EFF6FF' : 'transparent',
+                border: activePage === 'profile' ? '1px solid #BFDBFE' : '1px solid transparent',
+                borderRadius: '8px',
+                padding: '4px 10px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ fontSize: '13px', fontWeight: 700, color: activePage === 'profile' ? '#1D4ED8' : '#0F172A' }}>
                 {user?.full_name || 'Commercial Broker'}
               </div>
               <div style={{ fontSize: '11px', color: '#64748B' }}>
                 {user?.agency_name || 'Apex Advisors'}
               </div>
-            </div>
+            </button>
 
             <button
               type="button"

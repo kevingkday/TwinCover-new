@@ -64,6 +64,25 @@ def test_auth_workflow():
     assert me_resp.status_code == 200
     assert me_resp.json()["email"] == email
 
+    # Update profile & brokerage details
+    patch_resp = client.patch(
+        "/api/auth/me",
+        json={"full_name": "  Updated Broker Name  ", "agency_name": "  Pacific Risk Partners  "},
+        headers=headers,
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["full_name"] == "Updated Broker Name"
+    assert patch_resp.json()["agency_name"] == "Pacific Risk Partners"
+    assert patch_resp.json()["email"] == email
+
+    # Blank values should be rejected
+    bad_patch = client.patch(
+        "/api/auth/me",
+        json={"agency_name": "   "},
+        headers=headers,
+    )
+    assert bad_patch.status_code == 422
+
 
 def test_client_crud():
     # Register isolated broker for this test

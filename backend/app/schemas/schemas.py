@@ -18,9 +18,29 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
 
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    agency_name: Optional[str] = Field(None, min_length=1, max_length=255)
+
+    @field_validator("full_name", "agency_name")
+    @classmethod
+    def strip_non_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("Value cannot be blank")
+        return cleaned
+
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class GoogleAuthRequest(BaseModel):
+    credential: str
+    agency_name: Optional[str] = None
 
 
 class UserResponse(UserBase):
