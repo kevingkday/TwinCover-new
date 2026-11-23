@@ -1,8 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const headers = { ...options.headers };
+  const { baseUrl = API_BASE_URL, ...fetchOptions } = options;
+  const url = `${baseUrl}${endpoint}`;
+  const headers = { ...fetchOptions.headers };
 
   // Inject JWT Bearer token if present
   const token = localStorage.getItem('twincover_token');
@@ -11,12 +12,12 @@ export async function apiRequest(endpoint, options = {}) {
   }
 
   // If body is not FormData, default to application/json
-  if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
+  if (fetchOptions.body && !(fetchOptions.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
   const response = await fetch(url, {
-    ...options,
+    ...fetchOptions,
     headers,
   });
 

@@ -5,5 +5,5 @@ pages_build_output_dir = "frontend/dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "twincover-db"
-database_id = "your-cloudflare-d1-database-id-here"
+database_id = "682572ac-367e-41fd-b367-ca6c40a3e73f"
 migrations_dir = "backend/migrations"

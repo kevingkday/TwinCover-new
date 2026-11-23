@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import secrets
 from typing import Optional
 import bcrypt
 from jose import JWTError, jwt
@@ -62,5 +63,14 @@ def get_current_user(
 
     user = db.query(User).filter(User.email == token_data.email).first()
     if user is None:
-        raise credentials_exception
+        # Auto-provision a local shadow user when authenticated via Cloudflare Edge Auth (D1)
+        user = User(
+            email=token_data.email,
+            hashed_password=get_password_hash(secrets.token_urlsafe(32)),
+            full_name=token_data.email.split("@")[0].title(),
+            agency_name="TwinCover Commercial Advisors",
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
     return user

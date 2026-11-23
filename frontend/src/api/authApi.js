@@ -8,9 +8,12 @@ function persistAuthSession(data) {
   return data;
 }
 
+const AUTH_API_BASE = '/api';
+
 export const authApi = {
   async login(email, password) {
     const data = await apiRequest('/auth/login', {
+      baseUrl: AUTH_API_BASE,
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -19,6 +22,7 @@ export const authApi = {
 
   async register(email, password, full_name, agency_name) {
     const data = await apiRequest('/auth/register', {
+      baseUrl: AUTH_API_BASE,
       method: 'POST',
       body: JSON.stringify({ email, password, full_name, agency_name }),
     });
@@ -27,6 +31,7 @@ export const authApi = {
 
   async googleAuth(credential, agency_name) {
     const data = await apiRequest('/auth/google', {
+      baseUrl: AUTH_API_BASE,
       method: 'POST',
       body: JSON.stringify({ credential, agency_name }),
     });
@@ -34,7 +39,7 @@ export const authApi = {
   },
 
   async getMe() {
-    const data = await apiRequest('/auth/me');
+    const data = await apiRequest('/auth/me', { baseUrl: AUTH_API_BASE });
     if (data) {
       localStorage.setItem('twincover_user', JSON.stringify(data));
     }
@@ -43,6 +48,7 @@ export const authApi = {
 
   async updateProfile(profileData) {
     const data = await apiRequest('/auth/me', {
+      baseUrl: AUTH_API_BASE,
       method: 'PATCH',
       body: JSON.stringify(profileData),
     });
