@@ -22,6 +22,17 @@ export default function App() {
   useEffect(() => {
     setIsAuthenticated(authApi.isAuthenticated());
     setCurrentUser(authApi.getCurrentUser());
+    if (window.location.pathname === '/login' || window.location.pathname === '/register') {
+      window.history.replaceState(null, '', '/');
+    }
+
+    const handleUnauthorized = () => {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setActivePage('login');
+    };
+    window.addEventListener('twincover:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('twincover:unauthorized', handleUnauthorized);
   }, []);
 
   const handleLoginSuccess = () => {

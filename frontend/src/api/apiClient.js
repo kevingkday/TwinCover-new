@@ -22,12 +22,10 @@ export async function apiRequest(endpoint, options = {}) {
   });
 
   if (response.status === 401) {
-    // Clear token if expired or unauthorized
+    // Clear token if expired or unauthorized and notify App state
     localStorage.removeItem('twincover_token');
     localStorage.removeItem('twincover_user');
-    if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-      window.location.href = '/login';
-    }
+    window.dispatchEvent(new CustomEvent('twincover:unauthorized'));
   }
 
   if (!response.ok) {
