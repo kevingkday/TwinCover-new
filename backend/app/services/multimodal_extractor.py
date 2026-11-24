@@ -186,7 +186,17 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "keywords": ["brick", "concrete", "steel", "frame", "masonry", "roof", "electrical", "amp", "plumbing", "hvac", "heating", "built"],
                 "full_keywords": ["brick", "concrete", "steel frame", "masonry", "joisted", "fire resistive", "exterior wall"],
                 "photo_prompt": "Take 1 exterior photo (front/side walls & roof line) + 1 electrical panel photo",
-                "reason": "Core COPE underwriting requirement for property rating and replacement cost."
+                "reason": "Core COPE underwriting requirement for property rating and replacement cost.",
+                "sub_items": [
+                    {"id": "chk_gen_1_const", "label": "Construction Class / Frame (Brick, Concrete, Steel, Wood)", "keywords": ["brick", "concrete", "steel", "wood frame", "masonry", "joisted", "fire resistive", "tilt-up", "cinder block"], "prompt": "Confirm wall & frame construction type"},
+                    {"id": "chk_gen_1_year", "label": "Year Built & Number of Storeys", "keywords": ["year built", "built in", "constructed in", "storey", "stories", "story"], "prompt": "Ask year building was built & storeys"},
+                    {"id": "chk_gen_1_ext", "label": "Exterior Photo (Front/Side Walls & Roof Line)", "keywords": ["exterior", "facade", "front wall", "side wall", "storefront", "roof line"], "prompt": "Take 1 exterior front/side photo"},
+                    {"id": "chk_gen_1_elec_amp", "label": "Electrical Service & Amps (e.g. 100A / 200A / 400A)", "keywords": ["amp", "200a", "100a", "400a", "600a", "service", "volts", "voltage"], "prompt": "Ask/record main electrical service amperage"},
+                    {"id": "chk_gen_1_elec_panel", "label": "Electrical Panel / Circuit Breakers (Photo & Brand)", "keywords": ["electrical panel", "circuit breaker", "breaker", "siemens", "eaton", "square d", "federal pioneer", "fuse"], "prompt": "Take photo of electrical panel with door open"},
+                    {"id": "chk_gen_1_roof", "label": "Roof Type & Age / Year Last Replaced", "keywords": ["roof", "shingle", "epdm", "tpo", "tar and gravel", "metal roof", "membrane", "torch-on"], "prompt": "Ask roof covering type & year last updated"},
+                    {"id": "chk_gen_1_plumb", "label": "Plumbing Type & Year Updated (Copper / PEX / Galvanized)", "keywords": ["plumbing", "copper", "pex", "galvanized", "cast iron", "poly-b", "piping"], "prompt": "Ask plumbing material & last update year"},
+                    {"id": "chk_gen_1_hvac", "label": "Heating / HVAC Type & Age (Furnace / Boiler / RTU)", "keywords": ["hvac", "heating", "furnace", "boiler", "rooftop", "rtu", "heat pump", "forced air"], "prompt": "Ask heating/HVAC system type & age"},
+                ]
             },
             {
                 "id": "chk_gen_2",
@@ -196,7 +206,13 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "keywords": ["retail", "showroom", "warehouse", "sq ft", "square feet", "operations", "store", "rug", "merchandise", "occupancy", "service", "kitchen", "condo", "office"],
                 "full_keywords": ["sq ft", "square feet", "square foot"],
                 "photo_prompt": "Take 1 wide interior photo showing main operations / showroom floor",
-                "reason": "Confirms commercial classification code (IBC/NAICS) and premises operations."
+                "reason": "Confirms commercial classification code (IBC/NAICS) and premises operations.",
+                "sub_items": [
+                    {"id": "chk_gen_2_ops", "label": "Primary Business Operations & Services Offered", "keywords": ["retail", "showroom", "warehouse", "office", "manufacturing", "restaurant", "service", "repair", "distribution", "operations"], "prompt": "Describe main business activities & services"},
+                    {"id": "chk_gen_2_sqft", "label": "Occupied Square Footage (sq ft)", "keywords": ["sq ft", "square feet", "square foot", "sqft"], "prompt": "Record total occupied square footage"},
+                    {"id": "chk_gen_2_rev", "label": "Annual Gross Revenue & Years in Business", "keywords": ["revenue", "sales", "annual", "years in business", "established", "started"], "prompt": "Ask annual revenue & years operating"},
+                    {"id": "chk_gen_2_photo", "label": "Wide Interior Photo (Showroom / Floor Operations)", "keywords": ["interior", "showroom", "floor", "aisle", "counter", "workspace"], "prompt": "Take 1 wide interior photo of operations"},
+                ]
             },
             {
                 "id": "chk_gen_3",
@@ -206,7 +222,13 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "keywords": ["sprinkler", "extinguisher", "fire alarm", "ulc", "hydrant", "riser", "smoke", "central station"],
                 "full_keywords": ["sprinkler", "fire alarm", "central station"],
                 "photo_prompt": "Take photo of sprinkler riser / fire extinguisher / fire alarm panel",
-                "reason": "Drives fire protection credits and avoids protective safeguards penalties."
+                "reason": "Drives fire protection credits and avoids protective safeguards penalties.",
+                "sub_items": [
+                    {"id": "chk_gen_3_sprink", "label": "Automatic Sprinklers (Yes/No, Wet/Dry, % Covered)", "keywords": ["sprinkler", "riser", "wet system", "dry system"], "prompt": "Confirm if building is sprinklered & snap riser"},
+                    {"id": "chk_gen_3_ext", "label": "Portable Fire Extinguishers & Inspection Tag Date", "keywords": ["extinguisher", "inspection tag", "abc"], "prompt": "Snap photo of fire extinguisher & tag"},
+                    {"id": "chk_gen_3_alarm", "label": "ULC-Listed Central Station Fire Alarm", "keywords": ["fire alarm", "ulc", "central station", "pull station", "smoke detector"], "prompt": "Confirm monitored ULC fire alarm"},
+                    {"id": "chk_gen_3_hydrant", "label": "Distance to Nearest Fire Hydrant & Fire Hall", "keywords": ["hydrant", "fire hall", "fire station", "fpo"], "prompt": "Note nearest hydrant / fire hall distance"},
+                ]
             },
             {
                 "id": "chk_gen_4",
@@ -216,7 +238,13 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "keywords": ["burglar", "cctv", "camera", "alarm", "deadbolt", "security", "lock", "gate", "monitored", "safe"],
                 "full_keywords": ["burglar", "cctv", "monitored"],
                 "photo_prompt": "Take photo of alarm keypad, CCTV camera, or front door deadbolt/gate",
-                "reason": "Mandatory for retail/showroom theft, burglary, and high-value stock limits."
+                "reason": "Mandatory for retail/showroom theft, burglary, and high-value stock limits.",
+                "sub_items": [
+                    {"id": "chk_gen_4_alarm", "label": "Monitored Burglar / Intrusion Alarm (Keypad Photo)", "keywords": ["burglar", "intrusion", "alarm", "keypad", "monitored"], "prompt": "Snap alarm keypad & confirm central monitoring"},
+                    {"id": "chk_gen_4_cctv", "label": "CCTV / Video Surveillance Coverage", "keywords": ["cctv", "camera", "surveillance", "dvr", "nvr"], "prompt": "Note camera coverage & retention"},
+                    {"id": "chk_gen_4_locks", "label": "Deadbolts, Security Gates & Exterior Lighting", "keywords": ["deadbolt", "gate", "lock", "shutter", "bars", "lighting"], "prompt": "Check door deadbolts / roll-down gates"},
+                    {"id": "chk_gen_4_safe", "label": "Cash / High-Value Stock Storage & Safe", "keywords": ["safe", "vault", "high-value", "cash"], "prompt": "Confirm safe or high-value stock controls"},
+                ]
             },
             {
                 "id": "chk_gen_5",
@@ -226,7 +254,13 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "keywords": ["stock", "inventory", "tiv", "insurable value", "statement of values", "contents", "tenant improvements", "peak stock"],
                 "full_keywords": ["stock", "inventory", "tiv"],
                 "photo_prompt": "Ask insured for peak stock/inventory ($) & snap photo of main stock/equipment",
-                "reason": "Prevents coinsurance penalties on high-value stock or seasonal inventory peaks."
+                "reason": "Prevents coinsurance penalties on high-value stock or seasonal inventory peaks.",
+                "sub_items": [
+                    {"id": "chk_gen_5_bldg", "label": "Building Limit (if Owned) or Tenant Improvements ($)", "keywords": ["building", "tenant improvements", "betterments", "leasehold"], "prompt": "Ask building or tenant improvements value ($)"},
+                    {"id": "chk_gen_5_contents", "label": "Equipment, Fixtures & Office Contents ($)", "keywords": ["contents", "equipment", "fixtures", "furniture", "machinery"], "prompt": "Ask equipment & contents replacement value ($)"},
+                    {"id": "chk_gen_5_stock", "label": "Average & Peak Seasonal Stock / Inventory ($)", "keywords": ["stock", "inventory", "peak", "merchandise"], "prompt": "Ask average & peak inventory value ($)"},
+                    {"id": "chk_gen_5_bi", "label": "Business Interruption / Gross Earnings (12-Month)", "keywords": ["business interruption", "gross earnings", "rental income", "profits"], "prompt": "Ask annual gross earnings / BI limit"},
+                ]
             },
             {
                 "id": "chk_gen_6",
@@ -236,7 +270,12 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "keywords": ["adjoining", "adjacent", "neighboring", "flood", "sewer backup", "water damage"],
                 "full_keywords": ["adjoining", "adjacent", "sewer backup"],
                 "photo_prompt": "Take 1 exterior photo showing neighboring buildings/tenants",
-                "reason": "Identifies neighboring hazard exposures and water/flood sub-limit needs."
+                "reason": "Identifies neighboring hazard exposures and water/flood sub-limit needs.",
+                "sub_items": [
+                    {"id": "chk_gen_6_adj", "label": "Adjoining / Neighboring Tenants (Left, Right, Above)", "keywords": ["adjoining", "adjacent", "neighboring", "next door", "tenant"], "prompt": "Note neighboring occupancies (restaurant, auto, etc.)"},
+                    {"id": "chk_gen_6_water", "label": "Basement / Stock Elevation & Sewer Backup / Flood Risk", "keywords": ["basement", "flood", "sewer backup", "sump", "backwater", "pallet", "water damage"], "prompt": "Check basement storage, skids/pallets & water risk"},
+                    {"id": "chk_gen_6_ext", "label": "Exterior Photo Showing Neighboring Exposures", "keywords": ["neighboring building", "adjoining", "street view", "alley"], "prompt": "Take 1 exterior photo showing adjacent units"},
+                ]
             },
             {
                 "id": "chk_gen_7",
@@ -246,7 +285,12 @@ SPECIALTY_LINE_TEMPLATES: Dict[str, Dict[str, Any]] = {
                 "keywords": ["loss run", "loss history", "claims-free", "no losses", "zero claims", "claims history", "5 year", "five year"],
                 "full_keywords": ["loss run", "no losses", "zero claims", "claims-free"],
                 "photo_prompt": "Ask insured: Any claims in last 5 years? Who is current insurer?",
-                "reason": "Required by all Canadian Commercial P&C markets prior to quoting."
+                "reason": "Required by all Canadian Commercial P&C markets prior to quoting.",
+                "sub_items": [
+                    {"id": "chk_gen_7_loss", "label": "5-Year Claims / Loss History (or Claims-Free Confirmation)", "keywords": ["loss run", "loss history", "claims-free", "no losses", "zero claims", "claims history", "claim"], "prompt": "Ask: Any losses or claims in the last 5 years?"},
+                    {"id": "chk_gen_7_carrier", "label": "Expiring Insurer, Policy Expiry Date & Current Premium", "keywords": ["expiring", "current insurer", "carrier", "renewal", "intact", "aviva", "chubb", "travelers", "wawanesa", "economical", "northbridge"], "prompt": "Ask current carrier, expiry date & expiring premium"},
+                    {"id": "chk_gen_7_cgl", "label": "Requested CGL Limit ($2M / $5M) & Deductible Preference", "keywords": ["cgl", "liability limit", "$2m", "$5m", "2,000,000", "5,000,000", "deductible"], "prompt": "Confirm requested CGL limit & deductible"},
+                ]
             },
         ]
     }
@@ -515,23 +559,57 @@ class MultimodalExtractionEngine:
         combined_evidence_lower = evidence_digest.lower()
         checklist: List[Dict[str, Any]] = []
         for item_tmpl in spec_meta["checklist"]:
-            keywords = item_tmpl.get("keywords", [])
-            full_keywords = item_tmpl.get("full_keywords", keywords)
-            matched_kws = [kw for kw in keywords if kw in combined_evidence_lower]
-            matched_full = [kw for kw in full_keywords if kw in combined_evidence_lower]
+            sub_templates = item_tmpl.get("sub_items", [])
+            evaluated_subs: List[Dict[str, Any]] = []
 
-            if matched_full and len(matched_kws) >= 2:
-                item_status = "complete"
-                is_resolved = True
-                ev_summary = f"Verified via captured evidence ({', '.join(matched_kws[:4])})."
-            elif matched_kws:
-                item_status = "partial"
-                is_resolved = False
-                ev_summary = f"Partial info captured ({', '.join(matched_kws[:3])}) — {item_tmpl.get('photo_prompt') or 'confirm remaining details on site.'}"
+            if sub_templates:
+                for sub in sub_templates:
+                    sub_matches = [kw for kw in sub.get("keywords", []) if kw in combined_evidence_lower]
+                    is_captured = len(sub_matches) > 0
+                    evaluated_subs.append({
+                        "id": sub["id"],
+                        "label": sub["label"],
+                        "captured": is_captured,
+                        "matched_evidence": f"Matched: {', '.join(sub_matches[:3])}" if is_captured else None,
+                        "prompt": sub.get("prompt"),
+                    })
+
+                captured_count = sum(1 for s in evaluated_subs if s["captured"])
+                total_count = len(evaluated_subs)
+                remaining_labels = [s["label"].split(" (")[0] for s in evaluated_subs if not s["captured"]]
+
+                if captured_count == total_count:
+                    item_status = "complete"
+                    is_resolved = True
+                    ev_summary = f"All {total_count} sub-items verified via captured evidence."
+                elif captured_count > 0:
+                    item_status = "partial"
+                    is_resolved = False
+                    remaining_preview = ", ".join(remaining_labels[:3])
+                    extra = f" (+{len(remaining_labels) - 3} more)" if len(remaining_labels) > 3 else ""
+                    ev_summary = f"Captured {captured_count}/{total_count} — Still needed: {remaining_preview}{extra}"
+                else:
+                    item_status = "missing"
+                    is_resolved = False
+                    ev_summary = None
             else:
-                item_status = "missing"
-                is_resolved = False
-                ev_summary = None
+                keywords = item_tmpl.get("keywords", [])
+                full_keywords = item_tmpl.get("full_keywords", keywords)
+                matched_kws = [kw for kw in keywords if kw in combined_evidence_lower]
+                matched_full = [kw for kw in full_keywords if kw in combined_evidence_lower]
+
+                if matched_full and len(matched_kws) >= 2:
+                    item_status = "complete"
+                    is_resolved = True
+                    ev_summary = f"Verified via captured evidence ({', '.join(matched_kws[:4])})."
+                elif matched_kws:
+                    item_status = "partial"
+                    is_resolved = False
+                    ev_summary = f"Partial info captured ({', '.join(matched_kws[:3])}) — {item_tmpl.get('photo_prompt') or 'confirm remaining details on site.'}"
+                else:
+                    item_status = "missing"
+                    is_resolved = False
+                    ev_summary = None
 
             checklist.append({
                 "id": item_tmpl["id"],
@@ -542,7 +620,8 @@ class MultimodalExtractionEngine:
                 "status": item_status,
                 "evidence_summary": ev_summary,
                 "photo_prompt": item_tmpl.get("photo_prompt"),
-                "reason": item_tmpl["reason"]
+                "reason": item_tmpl["reason"],
+                "sub_items": evaluated_subs if evaluated_subs else None,
             })
 
         # Build Pre-Bind Underwriter Narrative with inline source citations

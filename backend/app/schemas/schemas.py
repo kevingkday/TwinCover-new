@@ -323,6 +323,14 @@ class CitedUnderwritingField(BaseModel):
     citations: List[SourceCitation] = []
 
 
+class ChecklistSubItem(BaseModel):
+    id: str
+    label: str
+    captured: bool = False
+    matched_evidence: Optional[str] = None
+    prompt: Optional[str] = None
+
+
 class MissingInfoItem(BaseModel):
     id: str
     item: str
@@ -333,6 +341,7 @@ class MissingInfoItem(BaseModel):
     evidence_summary: Optional[str] = None
     photo_prompt: Optional[str] = None
     reason: Optional[str] = None
+    sub_items: Optional[List[ChecklistSubItem]] = None
 
 
 class EvidenceArtifactResponse(BaseModel):

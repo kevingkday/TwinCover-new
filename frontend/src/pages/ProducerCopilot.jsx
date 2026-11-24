@@ -20,6 +20,7 @@ import {
   RefreshCw,
   Layers,
   ChevronRight,
+  ChevronDown,
   Send,
   Trash2,
   X,
@@ -36,6 +37,53 @@ import { clientsApi } from '../api/clientsApi';
 import { lettersApi } from '../api/lettersApi';
 import { offlineCaptureQueue } from '../utils/offlineCaptureQueue';
 import GuidedWalkthrough from '../components/GuidedWalkthrough';
+
+const DEFAULT_CHECKLIST_SUB_ITEMS = {
+  chk_gen_1: [
+    { id: 'chk_gen_1_const', label: 'Construction Class / Frame (Brick, Concrete, Steel, Wood)', captured: false, prompt: 'Confirm wall & frame construction type' },
+    { id: 'chk_gen_1_year', label: 'Year Built & Number of Storeys', captured: false, prompt: 'Ask year building was built & storeys' },
+    { id: 'chk_gen_1_ext', label: 'Exterior Photo (Front/Side Walls & Roof Line)', captured: false, prompt: 'Take 1 exterior front/side photo' },
+    { id: 'chk_gen_1_elec_amp', label: 'Electrical Service & Amps (e.g. 100A / 200A / 400A)', captured: false, prompt: 'Ask/record main electrical service amperage' },
+    { id: 'chk_gen_1_elec_panel', label: 'Electrical Panel / Circuit Breakers (Photo & Brand)', captured: false, prompt: 'Take photo of electrical panel with door open' },
+    { id: 'chk_gen_1_roof', label: 'Roof Type & Age / Year Last Replaced', captured: false, prompt: 'Ask roof covering type & year last updated' },
+    { id: 'chk_gen_1_plumb', label: 'Plumbing Type & Year Updated (Copper / PEX / Galvanized)', captured: false, prompt: 'Ask plumbing material & last update year' },
+    { id: 'chk_gen_1_hvac', label: 'Heating / HVAC Type & Age (Furnace / Boiler / RTU)', captured: false, prompt: 'Ask heating/HVAC system type & age' },
+  ],
+  chk_gen_2: [
+    { id: 'chk_gen_2_ops', label: 'Primary Business Operations & Services Offered', captured: false, prompt: 'Describe main business activities & services' },
+    { id: 'chk_gen_2_sqft', label: 'Occupied Square Footage (sq ft)', captured: false, prompt: 'Record total occupied square footage' },
+    { id: 'chk_gen_2_rev', label: 'Annual Gross Revenue & Years in Business', captured: false, prompt: 'Ask annual revenue & years operating' },
+    { id: 'chk_gen_2_photo', label: 'Wide Interior Photo (Showroom / Floor Operations)', captured: false, prompt: 'Take 1 wide interior photo of operations' },
+  ],
+  chk_gen_3: [
+    { id: 'chk_gen_3_sprink', label: 'Automatic Sprinklers (Yes/No, Wet/Dry, % Covered)', captured: false, prompt: 'Confirm if building is sprinklered & snap riser' },
+    { id: 'chk_gen_3_ext', label: 'Portable Fire Extinguishers & Inspection Tag Date', captured: false, prompt: 'Snap photo of fire extinguisher & tag' },
+    { id: 'chk_gen_3_alarm', label: 'ULC-Listed Central Station Fire Alarm', captured: false, prompt: 'Confirm monitored ULC fire alarm' },
+    { id: 'chk_gen_3_hydrant', label: 'Distance to Nearest Fire Hydrant & Fire Hall', captured: false, prompt: 'Note nearest hydrant / fire hall distance' },
+  ],
+  chk_gen_4: [
+    { id: 'chk_gen_4_alarm', label: 'Monitored Burglar / Intrusion Alarm (Keypad Photo)', captured: false, prompt: 'Snap alarm keypad & confirm central monitoring' },
+    { id: 'chk_gen_4_cctv', label: 'CCTV / Video Surveillance Coverage', captured: false, prompt: 'Note camera coverage & retention' },
+    { id: 'chk_gen_4_locks', label: 'Deadbolts, Security Gates & Exterior Lighting', captured: false, prompt: 'Check door deadbolts / roll-down gates' },
+    { id: 'chk_gen_4_safe', label: 'Cash / High-Value Stock Storage & Safe', captured: false, prompt: 'Confirm safe or high-value stock controls' },
+  ],
+  chk_gen_5: [
+    { id: 'chk_gen_5_bldg', label: 'Building Limit (if Owned) or Tenant Improvements ($)', captured: false, prompt: 'Ask building or tenant improvements value ($)' },
+    { id: 'chk_gen_5_contents', label: 'Equipment, Fixtures & Office Contents ($)', captured: false, prompt: 'Ask equipment & contents replacement value ($)' },
+    { id: 'chk_gen_5_stock', label: 'Average & Peak Seasonal Stock / Inventory ($)', captured: false, prompt: 'Ask average & peak inventory value ($)' },
+    { id: 'chk_gen_5_bi', label: 'Business Interruption / Gross Earnings (12-Month)', captured: false, prompt: 'Ask annual gross earnings / BI limit' },
+  ],
+  chk_gen_6: [
+    { id: 'chk_gen_6_adj', label: 'Adjoining / Neighboring Tenants (Left, Right, Above)', captured: false, prompt: 'Note neighboring occupancies (restaurant, auto, etc.)' },
+    { id: 'chk_gen_6_water', label: 'Basement / Stock Elevation & Sewer Backup / Flood Risk', captured: false, prompt: 'Check basement storage, skids/pallets & water risk' },
+    { id: 'chk_gen_6_ext', label: 'Exterior Photo Showing Neighboring Exposures', captured: false, prompt: 'Take 1 exterior photo showing adjacent units' },
+  ],
+  chk_gen_7: [
+    { id: 'chk_gen_7_loss', label: '5-Year Claims / Loss History (or Claims-Free Confirmation)', captured: false, prompt: 'Ask: Any losses or claims in the last 5 years?' },
+    { id: 'chk_gen_7_carrier', label: 'Expiring Insurer, Policy Expiry Date & Current Premium', captured: false, prompt: 'Ask current carrier, expiry date & expiring premium' },
+    { id: 'chk_gen_7_cgl', label: 'Requested CGL Limit ($2M / $5M) & Deductible Preference', captured: false, prompt: 'Confirm requested CGL limit & deductible' },
+  ],
+};
 
 function VaultMediaPreview({ artifact }) {
   const [mediaUrl, setMediaUrl] = useState(null);
@@ -167,6 +215,7 @@ export default function ProducerCopilot({ initialClientId = null }) {
   const [editableFields, setEditableFields] = useState([]);
   const [editableNarrative, setEditableNarrative] = useState('');
   const [editableChecklist, setEditableChecklist] = useState([]);
+  const [expandedChecklistIds, setExpandedChecklistIds] = useState({});
   const [editableFollowup, setEditableFollowup] = useState('');
   const [savingSub, setSavingSub] = useState(false);
   const [copiedFollowup, setCopiedFollowup] = useState(false);
@@ -686,6 +735,71 @@ export default function ProducerCopilot({ initialClientId = null }) {
       alert('Failed to save submission: ' + err.message);
     } finally {
       setSavingSub(false);
+    }
+  };
+
+  const handleToggleChecklistExpand = (itemId) => {
+    setExpandedChecklistIds((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  const handleToggleChecklistSubItem = async (itemId, subItemId) => {
+    const updatedList = editableChecklist.map((item) => {
+      if (item.id !== itemId) return item;
+      const baseSubs =
+        (item.sub_items && item.sub_items.length > 0
+          ? item.sub_items
+          : DEFAULT_CHECKLIST_SUB_ITEMS[item.id]) || [];
+      const nextSubs = baseSubs.map((sub) =>
+        sub.id === subItemId
+          ? {
+              ...sub,
+              captured: !sub.captured,
+              matched_evidence: !sub.captured
+                ? sub.matched_evidence || 'Manually verified'
+                : null,
+            }
+          : sub
+      );
+      const capturedCount = nextSubs.filter((s) => s.captured).length;
+      const totalCount = nextSubs.length;
+      const remaining = nextSubs
+        .filter((s) => !s.captured)
+        .map((s) => s.label.split(' (')[0]);
+      const nextStatus =
+        capturedCount === totalCount
+          ? 'complete'
+          : capturedCount > 0
+          ? 'partial'
+          : 'missing';
+      const nextSummary =
+        capturedCount === totalCount
+          ? `All ${totalCount} sub-items verified.`
+          : capturedCount > 0
+          ? `Captured ${capturedCount}/${totalCount} — Still needed: ${remaining.slice(0, 3).join(', ')}${remaining.length > 3 ? ` (+${remaining.length - 3} more)` : ''}`
+          : null;
+
+      return {
+        ...item,
+        sub_items: nextSubs,
+        resolved: capturedCount === totalCount,
+        status: nextStatus,
+        evidence_summary: nextSummary,
+      };
+    });
+
+    setEditableChecklist(updatedList);
+    if (selectedSub) {
+      try {
+        const updated = await submissionsApi.updateSubmission(selectedSub.id, {
+          missing_info_checklist: updatedList,
+        });
+        setSelectedSub(updated);
+      } catch (e) {
+        console.error(e);
+      }
     }
   };
 
@@ -1639,55 +1753,156 @@ export default function ProducerCopilot({ initialClientId = null }) {
                           const bg = isComplete ? '#ECFDF5' : isPartial ? '#EFF6FF' : '#FFFBEB';
                           const border = isComplete ? '#A7F3D0' : isPartial ? '#BFDBFE' : '#FDE68A';
                           const titleColor = isComplete ? '#065F46' : isPartial ? '#1E3A8A' : '#92400E';
+                          const subItems =
+                            (chk.sub_items && chk.sub_items.length > 0
+                              ? chk.sub_items
+                              : DEFAULT_CHECKLIST_SUB_ITEMS[chk.id]) || [];
+                          const capturedSubs = subItems.filter((s) => s.captured).length;
+                          const isExpanded = !!expandedChecklistIds[chk.id];
+
                           return (
                             <div
                               key={chk.id}
-                              onClick={() => handleToggleChecklistItem(chk.id)}
                               style={{
-                                padding: '9px 11px',
                                 borderRadius: '8px',
                                 background: bg,
                                 border: `1px solid ${border}`,
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: '8px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
+                                overflow: 'hidden',
                               }}
                             >
-                              <input
-                                type="checkbox"
-                                checked={!!isComplete}
-                                onChange={() => {}}
-                                style={{ marginTop: '2px', cursor: 'pointer' }}
-                              />
-                              <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                                  <span
-                                    style={{
-                                      fontWeight: 700,
-                                      color: titleColor,
-                                      textDecoration: isComplete ? 'line-through' : 'none',
-                                    }}
-                                  >
-                                    {chk.item}
-                                  </span>
-                                  {isPartial && (
-                                    <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '999px', background: '#DBEAFE', color: '#1D4ED8', flexShrink: 0 }}>
-                                      PARTIAL
+                              <div
+                                onClick={() => handleToggleChecklistExpand(chk.id)}
+                                style={{
+                                  padding: '9px 11px',
+                                  display: 'flex',
+                                  alignItems: 'flex-start',
+                                  gap: '8px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={!!isComplete}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={() => handleToggleChecklistItem(chk.id)}
+                                  title="Mark entire category complete"
+                                  style={{ marginTop: '2px', cursor: 'pointer' }}
+                                />
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                    <span
+                                      style={{
+                                        fontWeight: 700,
+                                        color: titleColor,
+                                        textDecoration: isComplete ? 'line-through' : 'none',
+                                      }}
+                                    >
+                                      {chk.item}
                                     </span>
-                                  )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                      {subItems.length > 0 && (
+                                        <span
+                                          style={{
+                                            fontSize: '10px',
+                                            fontWeight: 700,
+                                            padding: '1px 6px',
+                                            borderRadius: '999px',
+                                            background: isComplete ? '#D1FAE5' : isPartial ? '#DBEAFE' : '#FEF3C7',
+                                            color: isComplete ? '#065F46' : isPartial ? '#1D4ED8' : '#92400E',
+                                          }}
+                                        >
+                                          {isPartial ? `PARTIAL · ${capturedSubs}/${subItems.length}` : `${capturedSubs}/${subItems.length} items`}
+                                        </span>
+                                      )}
+                                      {isExpanded ? <ChevronDown size={14} color={titleColor} /> : <ChevronRight size={14} color={titleColor} />}
+                                    </div>
+                                  </div>
+                                  {chk.evidence_summary ? (
+                                    <div style={{ fontSize: '11px', color: isComplete ? '#047857' : '#1D4ED8', marginTop: '2px' }}>
+                                      {chk.evidence_summary}
+                                    </div>
+                                  ) : chk.photo_prompt ? (
+                                    <div style={{ fontSize: '11px', color: '#B45309', marginTop: '2px' }}>
+                                      Prompt: {chk.photo_prompt}
+                                    </div>
+                                  ) : null}
                                 </div>
-                                {chk.evidence_summary ? (
-                                  <div style={{ fontSize: '11px', color: isComplete ? '#047857' : '#1D4ED8', marginTop: '2px' }}>
-                                    {chk.evidence_summary}
-                                  </div>
-                                ) : chk.photo_prompt ? (
-                                  <div style={{ fontSize: '11px', color: '#B45309', marginTop: '2px' }}>
-                                    Prompt: {chk.photo_prompt}
-                                  </div>
-                                ) : null}
                               </div>
+
+                              {isExpanded && subItems.length > 0 && (
+                                <div
+                                  style={{
+                                    borderTop: `1px solid ${border}`,
+                                    background: 'rgba(255, 255, 255, 0.78)',
+                                    padding: '8px 11px 10px 30px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '6px',
+                                  }}
+                                >
+                                  {subItems.map((sub) => (
+                                    <div
+                                      key={sub.id}
+                                      onClick={() => handleToggleChecklistSubItem(chk.id, sub.id)}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        justifyContent: 'space-between',
+                                        gap: '8px',
+                                        padding: '5px 8px',
+                                        borderRadius: '6px',
+                                        background: sub.captured ? '#ECFDF5' : '#FFFFFF',
+                                        border: `1px solid ${sub.captured ? '#A7F3D0' : '#E2E8F0'}`,
+                                        cursor: 'pointer',
+                                        fontSize: '11.5px',
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', flex: 1 }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={!!sub.captured}
+                                          onChange={() => {}}
+                                          style={{ marginTop: '2px', cursor: 'pointer' }}
+                                        />
+                                        <div>
+                                          <div
+                                            style={{
+                                              fontWeight: 600,
+                                              color: sub.captured ? '#065F46' : '#0F172A',
+                                              textDecoration: sub.captured ? 'line-through' : 'none',
+                                            }}
+                                          >
+                                            {sub.label}
+                                          </div>
+                                          {sub.captured && sub.matched_evidence ? (
+                                            <div style={{ fontSize: '10.5px', color: '#047857', marginTop: '1px' }}>
+                                              {sub.matched_evidence}
+                                            </div>
+                                          ) : !sub.captured && sub.prompt ? (
+                                            <div style={{ fontSize: '10.5px', color: '#B45309', marginTop: '1px' }}>
+                                              Needed: {sub.prompt}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                      <span
+                                        style={{
+                                          fontSize: '10px',
+                                          fontWeight: 700,
+                                          padding: '1px 6px',
+                                          borderRadius: '999px',
+                                          background: sub.captured ? '#D1FAE5' : '#FEF3C7',
+                                          color: sub.captured ? '#065F46' : '#92400E',
+                                          flexShrink: 0,
+                                        }}
+                                      >
+                                        {sub.captured ? 'Recorded' : 'Needed'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           );
                         })}

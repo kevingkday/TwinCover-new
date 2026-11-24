@@ -323,6 +323,16 @@ async def quick_walkin_capture(
             "evidence_summary": None,
             "photo_prompt": item.get("photo_prompt"),
             "reason": item["reason"],
+            "sub_items": [
+                {
+                    "id": sub["id"],
+                    "label": sub["label"],
+                    "captured": False,
+                    "matched_evidence": None,
+                    "prompt": sub.get("prompt"),
+                }
+                for sub in item.get("sub_items", [])
+            ] or None,
         }
         for item in spec_tmpl["checklist"]
     ]
